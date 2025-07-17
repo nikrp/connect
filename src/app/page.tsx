@@ -2,10 +2,8 @@
 
 import Link from 'next/link'
 import { Button } from "@/components/ui/button";
-import { ArrowRightLeft, ArrowUpRight, Award, CircleCheckIcon, CircleHelpIcon, CircleIcon, Facebook, Instagram, Star, StarHalf, Target, Twitter, Users } from 'lucide-react';
+import { ArrowRightLeft, ArrowUpRight, Award, CircleCheckIcon, CircleHelpIcon, CircleIcon, Facebook, Instagram, MenuIcon, Star, Target, Twitter, Users } from 'lucide-react';
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu"
-import { WritingText } from '../components/animate-ui/text/writing';
-import { SplittingText } from '../components/animate-ui/text/splitting';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -142,11 +140,12 @@ export default function Home() {
   })
 
   return (
-    <div className={`min-h-screen`}>
+    <div className={`min-h-screen bg-background`}>
       {/* Navbar */}
       <div className={`sticky top-0 left-0 m-3.5 rounded-3xl bg-background/5 backdrop-blur-lg flex items-center p-3.5 justify-between`}>
-        <h1 className={`text-3xl font-semibold font-sans text-foreground`}>Connect</h1>
-        <NavigationMenu viewport={false}>
+        <Button variant={`outline`} size={`icon`} className={`cursor-pointer lg:hidden mr-5`}><MenuIcon /></Button>
+        <h1 className={`text-3xl font-semibold font-sans text-foreground mr-auto lg:mr-0`}>Connect</h1>
+        <NavigationMenu className={`hidden lg:block`} viewport={false}>
           <NavigationMenuList>
             <NavigationMenuItem>
               <NavigationMenuTrigger>Home</NavigationMenuTrigger>
@@ -286,25 +285,25 @@ export default function Home() {
       </div>
 
       {/* Hero Section */}
-      <div className={`mt-20 w-5/6 mx-auto flex items-center `}>
-        <div className={`w-1/2`}>
-          <h1 className={`text-7xl/20 font-semibold font-sans text-foreground text-left`}>Find your <span className={`font-serif font-normal italic`}>Perfect</span> Project Partner</h1>
+      <div className={`mt-20 w-5/6 mx-auto flex flex-col lg:flex-row lg:items-center `}>
+        <div className={`w-full lg:w-1/2`}>
+          <h1 className={`text-5xl/15 lg:text-7xl/20 font-semibold font-sans text-foreground text-left`}>Find your <span className={`font-serif font-normal italic`}>Perfect</span> Project Partner</h1>
           {/* <p className={`text-2xl mt-5 text-foreground/90`}>No more searching alone. Find your ideal project partners, powered by AI.</p> */}
           <div className="flex w-full items-center gap-2 mt-7.5 mb-10">
             <Input type="email" placeholder="someone@example.com" className={`h-12`} value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Link href={`/register?email=${email}`}><Button type="submit" variant="outline" size={`lg`} className={`h-12 text-lg cursor-pointer`}>
+            <Link href={`/register?email=${email}`}><Button type="submit" variant="outline" className={`h-12 text-base cursor-pointer`}>
               Get Started
             </Button></Link>
           </div>
         </div>
-        <div className={`w-1/2 flex justify-end items-center`}>
-          <Card className={`w-9/12`}>
+        <div className={`w-full lg:w-1/2 flex lg:justify-end items-center`}>
+          <Card className={`w-full lg:w-9/12`}>
             <CardContent>
               <CardDescription className={`flex items-center gap-1 mb-5`}><Star className={`text-yellow-300 fill-yellow-300`} size={20} /><Star size={20} className={`text-yellow-300 fill-yellow-300`} /><Star size={20} className={`text-yellow-300 fill-yellow-300`} /><Star size={20} className={`text-yellow-300 fill-yellow-300`} /><Star size={20} className={`text-yellow-300 fill-yellow-300`} /></CardDescription>
               <div className={`flex items-center justify-between`}>
                 <div className={`flex flex-col gap-0.5`}>
                   <p className={`text-card-foreground text-lg font-semibold`}>Rachael Standall</p>
-                  <p className={`text-secondary-foreground`}>New York, U.S.A</p>
+                  <p className={`text-foreground/80`}>New York, U.S.A</p>
                 </div>
                 <Avatar className={`rounded-lg size-10`}>
                   <AvatarImage src={`https://github.com/shadcn.png`} alt={`@shadcn`} />
@@ -324,13 +323,13 @@ export default function Home() {
 
       {/* Our Approach */}
       <div className={`my-20 w-5/6 mx-auto rounded-xl bg-card p-15`}>
-        <div className={`flex items-center justify-between`}>
-          <p className={`text-5xl font-sans text-card-foreground w-7/12`}>Collaborate to elevate your potential</p>
-          <div className={`w-5/12 flex items-center justify-center`}>
-            <p className={`w-5/6 text-card-foreground/85 text-sm`}>Connect empowers high school students to find the perfect teammates, transforming individual aspirations into shared successes.</p>
+        <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between`}>
+          <p className={`text-5xl font-sans text-card-foreground lg:w-7/12`}>Collaborate to elevate your potential</p>
+          <div className={`lg:w-5/12 flex items-center justify-center`}>
+            <p className={`lg:w-5/6 mt-5 lg:mt-0 text-card-foreground/85 text-sm`}>Connect empowers high school students to find the perfect teammates, transforming individual aspirations into shared successes.</p>
           </div>
         </div>
-        <div className={`grid grid-cols-3 gap-12 mt-15`}>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-12 mt-15`}>
           <div className={`flex flex-col gap-1`}>
             <Users size={30} />
             <p className={`mt-2 text-xl font-semibold font-sans text-white`}>Smart Matching</p>
@@ -351,8 +350,8 @@ export default function Home() {
 
       {/* Steps */}
       <div className={`mb-20 w-5/6 mx-auto`}>
-        <p className={`text-5xl/14 font-sans text-card-foreground w-8/12`}>Produce innovative solutions with the perfect teammates.</p>
-        <div className={`grid grid-cols-3 gap-5 mt-7.5`}>
+        <p className={`lg:text-5xl/14 font-sans text-card-foreground text-center text-4xl/12 lg:text-left lg:w-8/12`}>Produce innovative solutions with the perfect teammates.</p>
+        <div className={`grid grid-cols-1 lg:grid-cols-3 gap-5 mt-7.5`}>
           <div className={`flex flex-col gap-3 bg-card p-5 rounded-xl w-full`}>
             <div className={`flex items-center justify-between`}>
               <p className={`text-lg text-foreground`}>Start your Account</p>
@@ -376,13 +375,13 @@ export default function Home() {
 
       {/* Why Choose Connect */}
       <div className={`mb-20 w-9/12 mx-auto`}>
-        <p className={`text-5xl font-sans text-foreground text-center`}>Why Choose Connect</p>
+        <p className={`text-4xl lg:text-5xl font-sans text-foreground text-center`}>Why Choose Connect</p>
         <div className={`grid grid-cols-2 gap-5 mt-7.5`}>
-          <div className={`bg-card border border-border rounded-xl p-7.5`}>
+          <div className={`col-span-2 lg:col-span-1 bg-card border border-border rounded-xl p-7.5`}>
             <p className={`text-7xl font-sans mb-7.5 text-primary`}>3k+</p>
             <p className={`text-xl text-card-foreground`}>Members already collaborating on Connect</p>
           </div>
-          <div className={`bg-card border border-border rounded-xl p-7.5`}>
+          <div className={`col-span-2 lg:col-span-1 bg-card border border-border rounded-xl p-7.5`}>
             <p className={`text-xl text-card-foreground mb-8.5`}>Instantly connect with your matches through safe and secure messaging.</p>
             <div className={`flex items-center gap-4 mx-auto w-fit`}>
               <Avatar className={`rounded-lg size-15`}>
@@ -396,12 +395,12 @@ export default function Home() {
               </Avatar>
             </div>
           </div>
-          <div className={`bg-card border border-border rounded-xl p-7.5 col-span-2 flex items-start gap-13`}>
-            <div className={`w-5/12`}>
+          <div className={`bg-card border border-border rounded-xl p-7.5 col-span-2 flex flex-col lg:flex-row lg:items-start gap-13`}>
+            <div className={`lg:w-5/12`}>
               <p className={`text-4xl/13 text-card-foreground mb-1.5`}>Grow your network.</p>
               <p className={`text-base text-card-foreground`}>Connect with ambitious peers and watch your skills and projects flourish as you team up with the right individuals.</p>
             </div>
-            <div className={`w-6/12 max-h-[200px] overflow-hidden`}>
+            <div className={`lg:w-6/12 max-h-[200px] overflow-hidden`}>
               <Card>
                 <CardHeader>
                   <CardTitle>Total Connections</CardTitle>
@@ -471,20 +470,20 @@ export default function Home() {
       </div>
 
       {/* Final CTA */}
-      <div className={`mb-20 w-5/6 mx-auto bg-gradient-to-bl from-card to-card/75 p-15 rounded-xl flex items-center gap-10`}>
-        <p className={`text-4xl/15 text-card-foreground font-sans w-7/12`}>Ready to work with the best teams?</p>
-        <div className={`w-5/12 flex items-center justify-center gap-5`}>
+      <div className={`mb-20 w-5/6 mx-auto bg-gradient-to-bl from-card to-card/75 p-15 rounded-xl flex flex-col lg:flex-row items-center gap-10`}>
+        <p className={`text-center lg:text-left text-4xl/15 text-card-foreground font-sans lg:w-7/12`}>Ready to work with the best teams?</p>
+        <div className={`lg:w-5/12 flex items-center justify-center gap-5`}>
           <Button variant={`default`} size={`lg`} className={`cursor-pointer text-lg`}>Get Started</Button>
           <Button variant={`ghost`} size={`lg`} className={`cursor-pointer flex items-center gap-1.5 text-lg transition-all`}>Learn More <ArrowUpRight /></Button>
         </div>
       </div>
 
-      <div className={`w-5/6 mx-auto flex justify-between mb-10 gap-20`}>
-        <div className={`flex flex-col gap-3`}>
+      <div className={`w-5/6 mx-auto flex flex-col lg:flex-row lg:justify-between mb-10 gap-20`}>
+        <div className={`flex flex-col gap-3 text-center lg:text-left`}>
           <h1 className={`text-3xl font-semibold font-sans text-foreground`}>Connect</h1>
           <p className={`text-foreground/85 text-sm`}>&copy; 2025 Connect. All rights reserved.</p>
         </div>
-        <div className={`flex items-center justify-between w-4/6`}>
+        <div className={`flex flex-col gap-10 lg:gap-0 lg:flex-row items-center justify-between lg:w-4/6 text-center lg:text-left`}>
           <div className={`flex flex-col gap-4`}>
             <p className={`text-lg font-sans text-white`}>Company</p>
             <div className={`flex flex-col gap-2.5`}>
@@ -518,7 +517,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className={`w-1/6 flex flex-col gap-2`}>
+        <div className={`lg:w-1/6 flex items-center lg:items-start flex-col gap-2`}>
           <p className={`text-foreground text-sm`}>Follow Us On</p>
           <div className={`flex items-center gap-1.5`}>
             <Button variant={`outline`} size={`icon`} className={`cursor-pointer`}><Instagram /></Button>

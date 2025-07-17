@@ -1,12 +1,12 @@
 "use client"
 
-import { Computer, Globe, LogOut, Menu, MessageCircle, Moon, Plus, Sun, User } from "lucide-react";
+import { Computer, LogOut, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "./ui/drawer";
 
 export default function Navbar() {
     return (
-        <div className={`w-full py-3.5 px-3.5 border-b border-b-border flex items-center gap-5`}>
+        <div className={`w-full py-3.5 px-3.5 border-b border-b-border flex items-center gap-5 mb-2`}>
             <div className={`lg:hidden`} id={`hamburgerMenu`}>
                 <Drawer direction={`left`}>
                     <DrawerTrigger asChild>
