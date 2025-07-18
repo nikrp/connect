@@ -19,9 +19,9 @@ export default function Navbar() {
             <div className={`flex items-center gap-3.5`}>
                 <Button variant={`outline`} size={`icon`} className={`cursor-pointer`}><Computer /></Button>
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild className={`cursor-pointer hover:bg-foreground/10 transition-all p-2 rounded-lg`}>
+                    <DropdownMenuTrigger asChild className={`cursor-pointer hover:bg-foreground/10 transition-all p-2 ${isMobile ? `rounded-full` : `rounded-lg`}`}>
                         <div className={`flex flex-row-reverse items-center gap-2.5`}>
-                            <div className={``}>
+                            <div className={`${isMobile && `hidden`}`}>
                                 <p className={`text-sm`}>Nikhil Pellakuru</p>
                                 <p className={`text-xs text-foreground/80`}>Student</p>
                             </div>

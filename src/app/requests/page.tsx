@@ -71,6 +71,8 @@ const requests = [
         grade: "10th Grade",
         school: "Monta Vista High School",
         skillsNeeded: ["biology", "machine-learning", "fun"],
+        private: false,
+        protected: true,
         description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
     }
 ]
@@ -124,6 +126,7 @@ export default function Requests() {
                 <AppSidebar />
                 <div className={`mt-2 w-11/12 mx-auto`}>
                     <Navbar />
+                    <p className={`text-xl font-semibold mb-4 text-center`}>Explore Requests</p>
                     <div className={`flex items-center flex-wrap gap-1.5 w-full mb-2.5`}>
                         <Input value={search} onChange={onChange} placeholder={`Search by Title, Description, or Username...`} className={`w-full lg:w-3/6 xl:w-5/12 text-sm`} />
                         <Popover>
@@ -158,7 +161,7 @@ export default function Requests() {
                                 </Command>
                             </PopoverContent>
                         </Popover>
-                        <p className={`text-foreground/75 text-sm`}>{selected.length} Filters Applied</p>
+                        <p className={`text-foreground/75 text-sm ml-1`}>{selected.length} Filters Applied</p>
                         <div className={`h-5 mx-1.5 w-px rounded-full bg-foreground/15`} />
                         <p className={`text-foreground/75 text-sm`}>3 of 3 Results</p>
                     </div>
@@ -204,10 +207,10 @@ export default function Requests() {
                                                         )
                                                     })}
                                                 </div>
-                                                <Button variant={`secondary`} className={`cursor-pointer w-full`} size={`lg`}>Message</Button>
+                                                <Button variant={`secondary`} className={`cursor-pointer w-full`} size={`lg`}>{request.protected ? `Request to Message` : `Message`}</Button>
                                             </DialogContent>
                                         </Dialog>
-                                        <Button variant={`secondary`} className={`cursor-pointer w-full`}>Message</Button>
+                                        <Button variant={`secondary`} className={`cursor-pointer w-full`}>{request.protected ? `Request to Message` : `Message`}</Button>
                                     </div>
                                 </div>
                             )
