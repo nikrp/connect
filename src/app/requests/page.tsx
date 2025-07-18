@@ -3,9 +3,13 @@
 import AppSidebar from "@/components/app-sidebar";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { Check, Filter } from "lucide-react";
 import React, { useState } from "react";
 
 const requests = [
@@ -48,12 +52,65 @@ const requests = [
         school: "Monta Vista High School",
         skillsNeeded: ["biology", "machine-learning"],
         description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+    },
+    {
+        title: "Looking for ML + Bio partner for ISEF",
+        profilePhoto: "https://github.com/shadcn.png",
+        name: "Shadcn",
+        pronouns: "he/him",
+        postDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString('en-US', { 
+            timeZone: 'America/Los_Angeles',
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true,
+            timeZoneName: 'short'
+        }),
+        grade: "10th Grade",
+        school: "Monta Vista High School",
+        skillsNeeded: ["biology", "machine-learning", "fun"],
+        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
     }
+]
+
+const tags = [
+    "machine-learning",
+    "biology",
+    "fun",
+    "programming",
+    "math",
+    "science",
+    "physics",
+    "chemistry",
+    "biochemistry",
+    "computer-science",
+    "artificial-intelligence",
+    "data-science",
+    "robotics",
+    "engineering",
+    "electronics",
+    "web-development",
+    "mobile-development",
+    "cybersecurity",
+    "networking",
+    "database",
+    "cloud-computing",
+    "game-development",
+    "statistics",
+    "calculus",
+    "linear-algebra",
+    "quantum-computing",
+    "bioinformatics",
+    "neuroscience",
+    "environmental-science",
+    
 ]
 
 export default function Requests() {
     const [search, setSearch] = useState("");
-    const [filteredRequests, setFilteredRequests] = useState<typeof requests>([])
+    const [selected, setSelected] = useState<string[]>([]);
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearch(e.target.value);
@@ -64,11 +121,48 @@ export default function Requests() {
     return (
         <div className={``}>
             <SidebarProvider open={false} defaultOpen={false}>
-                {/* <Navbar /> */}
                 <AppSidebar />
                 <div className={`mt-2 w-11/12 mx-auto`}>
-                    <Input value={search} onChange={onChange} placeholder={`Search with tags (machine-learning, bio, biology, etc.)`} className={`mb-3 w-full text-sm`} />
-                    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3`}>
+                    <Navbar />
+                    <div className={`flex items-center flex-wrap gap-1.5 w-full mb-2.5`}>
+                        <Input value={search} onChange={onChange} placeholder={`Search by Title, Description, or Username...`} className={`w-full lg:w-3/6 xl:w-5/12 text-sm`} />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant={`outline`} className={`cursor-pointer`} size={`icon`}><Filter /></Button>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                                <Command>
+                                    <CommandInput placeholder="Search tags..." className={`h-9`} />
+                                    <CommandList>
+                                        <CommandEmpty>No Tags Found</CommandEmpty>
+                                        <CommandGroup>
+                                            {tags.map((tag, index) => {
+                                                return (
+                                                    <CommandItem className={`cursor-pointer`} key={index} value={tag} onSelect={(currentValue) => {
+                                                        if (selected.includes(currentValue)) {
+                                                            setSelected(selected.filter((value) => value !== currentValue));
+                                                        } else {
+                                                            setSelected([...selected, currentValue]);
+                                                        }
+                                                    }}>
+                                                        {tag}
+                                                        <Check className={cn(
+                                                            "ml-auto text-foreground",
+                                                            selected.includes(tag) ? `opacity-100`: `opacity-0`
+                                                        )} />
+                                                    </CommandItem>
+                                                )
+                                            })}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                        <p className={`text-foreground/75 text-sm`}>{selected.length} Filters Applied</p>
+                        <div className={`h-5 mx-1.5 w-px rounded-full bg-foreground/15`} />
+                        <p className={`text-foreground/75 text-sm`}>3 of 3 Results</p>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3`}>
                         {requests.map((request, index) => {
                             return (
                                 <div key={index} className={`border rounded-lg p-3.5`}>

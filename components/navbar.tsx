@@ -1,36 +1,48 @@
 "use client"
 
-import { Computer, LogOut, Menu } from "lucide-react";
+import { Computer, LogOut, LogOutIcon, Menu } from "lucide-react";
 import { Button } from "./ui/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "./ui/drawer";
+import { useSidebar } from "./ui/sidebar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export default function Navbar() {
+    const { toggleSidebar, isMobile } = useSidebar();
+
     return (
-        <div className={`w-full py-3.5 px-3.5 border-b border-b-border flex items-center gap-5 mb-2`}>
-            <div className={`lg:hidden`} id={`hamburgerMenu`}>
-                <Drawer direction={`left`}>
-                    <DrawerTrigger asChild>
-                        <Button variant={`outline`} size={`icon`} className={`cursor-pointer`}><Menu /></Button>
-                    </DrawerTrigger>
-                    <DrawerContent>
-                        <DrawerHeader className={`flex items-center justify-between`}>
-                            <DrawerTitle>Connect</DrawerTitle>
-                            <DrawerClose />
-                        </DrawerHeader>
-                        <div></div>
-                    </DrawerContent>
-                </Drawer>
+        <div className={`w-full py-3.5 pb-5 flex items-center gap-5 mb-2`}>
+            <div className={`${!isMobile && `hidden`}`} id={`hamburgerMenu`}>
+                <Button onClick={toggleSidebar} variant={`outline`} size={`icon`} className={`cursor-pointer`}><Menu /></Button>
             </div>
             <p className={`text-2xl font-semibold font-sans text-foreground mr-auto`}>Connect</p>
-            <div className={`hidden lg:flex items-center gap-8.5 ml-auto mr-7.5`}>
-                <p className={`text-base font-medium cursor-pointer flex items-center gap-1.5`}>Explore</p>
-                <p className={`text-base font-medium cursor-pointer flex items-center gap-1.5`}>Create</p>
-                <p className={`text-base font-medium cursor-pointer flex items-center gap-1.5`}>Messages</p>
-                <p className={`text-base font-medium cursor-pointer flex items-center gap-1.5`}>Profile</p>
-            </div>
-            <div className={`flex items-center gap-2.5`}>
+            
+            <div className={`flex items-center gap-3.5`}>
                 <Button variant={`outline`} size={`icon`} className={`cursor-pointer`}><Computer /></Button>
-                <Button variant={`destructive`} size={`default`} className={`cursor-pointer`}><LogOut />Logout</Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild className={`cursor-pointer hover:bg-foreground/10 transition-all p-2 rounded-lg`}>
+                        <div className={`flex flex-row-reverse items-center gap-2.5`}>
+                            <div className={``}>
+                                <p className={`text-sm`}>Nikhil Pellakuru</p>
+                                <p className={`text-xs text-foreground/80`}>Student</p>
+                            </div>
+                            <Avatar>
+                                <AvatarImage src={`https://github.com/nikrp.png`} />
+                                <AvatarFallback>Nikhil Pellakuru</AvatarFallback>
+                            </Avatar>
+                        </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuGroup>
+                            <DropdownMenuLabel className={`text-sm text-foreground/60`}>My Account</DropdownMenuLabel>
+                            <DropdownMenuItem className={`cursor-pointer`}>Profile</DropdownMenuItem>
+                            <DropdownMenuItem className={`cursor-pointer`}>Settings</DropdownMenuItem>
+                            <DropdownMenuItem className={`cursor-pointer`}>Keyboard Shortcuts</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className={`cursor-pointer`}>Support</DropdownMenuItem>
+                            <DropdownMenuItem variant={`destructive`} className={`flex items-center gap-2 cursor-pointer`}><LogOutIcon /> Log out</DropdownMenuItem>
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     )

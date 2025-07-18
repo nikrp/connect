@@ -1,30 +1,36 @@
-import { BookmarkIcon, MessageCircle, MessageCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "./ui/sidebar";
+import { BookmarkIcon, MessageCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "./ui/sidebar";
 
 export default function AppSidebar() {
+    const { isMobile } = useSidebar();
+
     return (
         <Sidebar variant={`floating`} side={`left`} collapsible={`icon`}>
             <SidebarHeader></SidebarHeader>
             <SidebarContent>
-                <SidebarMenu className={``}>
+                <SidebarMenu className={`lg:block flex items-start ${isMobile ? `pl-5 gap-5` : `pl-0 gap-0`}`}>
                     <SidebarMenuItem className={`p-0`}>
                         <SidebarMenuButton size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Explore`}>
                             <SearchIcon className={`hover:bg-none size-6`} />
+                            <span className={`md:hidden`}>Explore</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem className={`p-0`}>
                         <SidebarMenuButton size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Create Post`}>
                             <PlusIcon className={`hover:bg-none size-6`} />
+                            <span className={`md:hidden`}>Create Post</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem className={`p-0`}>
                         <SidebarMenuButton size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Messages`}>
                             <MessageCircleIcon className={`hover:bg-none size-6`} />
+                            <span className={`md:hidden`}>Messages</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem className={`p-0`}>
                         <SidebarMenuButton size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Saved`}>
                             <BookmarkIcon className={`hover:bg-none size-6`} />
+                            <span className={`md:hidden`}>Saved Posts</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
