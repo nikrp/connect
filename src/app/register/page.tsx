@@ -1,9 +1,18 @@
 import { GalleryVerticalEnd } from "lucide-react"
 import { RegisterForm } from "@/components/register-form"
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
-    <div>
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6 bg-card border border-border rounded-lg p-5">
+        <a href="#" className="flex items-center gap-2 self-center font-medium">
+          <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
+            <GalleryVerticalEnd className="size-4" />
+          </div>
+          Connect
+        </a>
+        <RegisterForm />
+      </div>
     </div>
   )
 }
