@@ -10,7 +10,6 @@ import { Checkbox } from "./ui/checkbox";
 import { Toaster } from "./ui/sonner";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { Router } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const RegisterSchema = z.object({
