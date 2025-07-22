@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AvatarImage } from '@radix-ui/react-avatar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const components: { title: string; href: string; description: string }[] = [
   {
@@ -122,6 +124,8 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function Home() {
+  const supabase = createClient();
+  const router = useRouter();
   const [timeRange, setTimeRange] = useState("90d");
   const [email, setEmail] = useState("");
 
@@ -138,6 +142,18 @@ export default function Home() {
     startDate.setDate(startDate.getDate() - daysToSubtract)
     return date >= startDate
   })
+
+  useEffect(() => {
+    async function collectSession() {
+      const session = await supabase.auth.getUser();
+
+      if (session.data.user) {
+        router.push("/requests");
+      }
+    }
+
+    collectSession()
+  }, []);
 
   return (
     <div className={`min-h-screen bg-background`}>
