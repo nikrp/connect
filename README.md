@@ -14,4 +14,4 @@ Whether you're looking for a teammate for a hackathon, a study partner, or someo
 
 - [ ] Add filter functionality to the requests list search and combobox.
 - [ ] Add message functionality and message request functionality.
-- [ ] Add dropdown to the theme switcher to add light and dark mode aside from system.
+- [ ] Add data collection functionality to `/requests/posts` data table.

@@ -1,4 +1,4 @@
-import { BookmarkIcon, MessageCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { BookmarkIcon, ListIcon, MessageCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "./ui/sidebar";
 
 export default function AppSidebar() {
@@ -17,8 +17,8 @@ export default function AppSidebar() {
                     </SidebarMenuItem>
                     <SidebarMenuItem className={`p-0`}>
                         <SidebarMenuButton size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Create Post`}>
-                            <PlusIcon className={`hover:bg-none size-6`} />
-                            <span className={`md:hidden`}>Create Post</span>
+                            <ListIcon className={`hover:bg-none size-6`} />
+                            <span className={`md:hidden`}>My Posts</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem className={`p-0`}>
