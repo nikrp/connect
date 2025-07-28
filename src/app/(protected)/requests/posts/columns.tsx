@@ -1,6 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table";
+import MembersCell from "./member-cell";
 
 export type Post = {
     id: string
@@ -24,6 +25,7 @@ export const columns: ColumnDef<Post>[] = [
     {
         accessorKey: "members",
         header: "Members",
+        cell: info => <MembersCell userIds={(info.getValue() as object[]).map((n: any) => n.user_id)} />
     },
     {
         accessorKey: "visibility",
