@@ -296,7 +296,7 @@ export default function Home() {
           </NavigationMenuList>
         </NavigationMenu>
         <div className={`flex items-center gap-3.5`}>
-          <Button className={`cursor-pointer`} variant={`default`}>Sign In</Button>
+          <Link href={`/login`}><Button className={`cursor-pointer`} variant={`default`}>Sign In</Button></Link>
         </div>
       </div>
 
