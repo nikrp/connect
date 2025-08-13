@@ -398,7 +398,7 @@ export default function Home() {
             <p className={`text-xl text-card-foreground`}>Members already collaborating on Connect</p>
           </div>
           <div className={`col-span-2 lg:col-span-1 bg-card border border-border rounded-xl p-7.5`}>
-            <p className={`text-xl text-card-foreground mb-8.5`}>Instantly connect with your matches through safe and secure messaging.</p>
+            <p className={`text-xl text-card-foreground mb-8.5`}>Instantly connect with your matches through their shared contact info.</p>
             <div className={`flex items-center gap-4 mx-auto w-fit`}>
               <Avatar className={`rounded-lg size-15`}>
                 <AvatarImage src={`https://github.com/nikrp.png`} />
