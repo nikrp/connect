@@ -457,7 +457,11 @@ export default function Home() {
                       <ChartTooltip
                         cursor={false}
                         content={
-                          <ChartTooltipContent
+                          <ChartTooltipContent 
+                            payload={[]}
+                            coordinate={{ x: 0, y: 0 }}
+                            active={false}
+                            accessibilityLayer={false}
                             labelFormatter={(value) => {
                               return new Date(value).toLocaleDateString("en-US", {
                                 month: "short",
