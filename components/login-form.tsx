@@ -48,7 +48,7 @@ export function LoginForm() {
     supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `http://localhost:3000/requests`
+        redirectTo: `${process.env.NEXT_PUBLIC_HOST}/requests`
       }
     }).then(({ data, error }) => {
       if (error) {
@@ -63,7 +63,7 @@ export function LoginForm() {
 
   async function forgotPassword() {
     const { data, error } = await supabase.auth.resetPasswordForEmail(form.getValues().email, { 
-      redirectTo: "http://localhost:3000/reset-password"
+      redirectTo: `${process.env.NEXT_PUBLIC_HOST}/reset-password`
     }) 
     
     if (error) {

@@ -68,7 +68,7 @@ export function RegisterForm() {
       supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `http://localhost:3000/onboarding`
+          redirectTo: `${process.env.NEXT_PUBLIC_HOST}/onboarding`
         }
       }).then(({ data, error }) => {
         if (error) {
