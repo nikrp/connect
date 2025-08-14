@@ -50,10 +50,6 @@ export default function Onboarding() {
         });
     }, []);
 
-    useEffect(() => {
-        console.log(bigForm, step);
-    }, [bigForm, step]);
-
     const StepComponent = steps[step].component;
 
     return (

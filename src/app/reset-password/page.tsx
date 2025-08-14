@@ -48,7 +48,6 @@ export default function ResetPassword() {
         } else {
             toast.success("Successfully updated password! Don't forget it!");
             router.push("/requests");
-            console.log(data);
         }
     }
 

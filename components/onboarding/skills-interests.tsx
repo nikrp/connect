@@ -56,10 +56,6 @@ export default function SkillsInterests({ setStep, setBigForm, bigForm }: { setS
         }
     }, [bigForm.skills, bigForm.interests]);
 
-    useEffect(() => {
-        console.log(form.getValues().skills)
-    }, [form.getValues().skills]);
-
     const onSubmit = (values: z.infer<typeof SkillsInterestsSchema>) => {
         setBigForm({
             ...bigForm,

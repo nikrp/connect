@@ -30,7 +30,6 @@ export default function Navbar() {
             } else {
                 setProfile((prev: any) => ({ ...prev, profile_photo: sData.signedUrl }));
                 localStorage.setItem('profile_photo', sData.signedUrl);
-                console.log(profile);
             }
         }
 

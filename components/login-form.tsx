@@ -54,11 +54,8 @@ export function LoginForm() {
       if (error) {
         console.error(error);
         toast.error("Something went wrong! If this issue persists please contact support.");
-      } else {
-        console.log(data);
-        
+      } else {        
         toast.success("Signed in successfully!");
-        toast(process.env.NEXT_PUBLIC_HOST)
       }
     });
   }
@@ -72,7 +69,6 @@ export function LoginForm() {
       toast.error("Error sending password reset email: " + error.message);
     } else {
       toast.success("Password reset email sent successfully!");
-      console.log(data)
     }
   }
 

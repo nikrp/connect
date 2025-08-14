@@ -21,7 +21,6 @@ export default function Posts() {
         return;
     }
 
-    console.log(data);
     setPosts(data);
   }
 

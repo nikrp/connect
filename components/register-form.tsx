@@ -80,7 +80,6 @@ export function RegisterForm() {
     });
 
     promise().then(result => {
-      console.log(result);
       toast.success("Account created successfully!");
     }).catch(error => {
       console.error(error);
