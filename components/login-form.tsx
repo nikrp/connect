@@ -56,7 +56,9 @@ export function LoginForm() {
         toast.error("Something went wrong! If this issue persists please contact support.");
       } else {
         console.log(data);
+        
         toast.success("Signed in successfully!");
+        toast(process.env.NEXT_PUBLIC_HOST)
       }
     });
   }
