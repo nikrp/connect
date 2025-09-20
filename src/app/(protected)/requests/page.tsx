@@ -10,72 +10,30 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Check, Filter } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-const requests = [
-    {
-        title: "Looking for ML + Bio partner for ISEF",
-        profilePhoto: "https://github.com/shadcn.png",
-        name: "Shadcn",
-        pronouns: "he/him",
-        postDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString('en-US', { 
-            timeZone: 'America/Los_Angeles',
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true,
-            timeZoneName: 'short'
-        }),
-        grade: "10th Grade",
-        school: "Monta Vista High School",
-        skillsNeeded: ["biology", "machine-learning", "fun"],
-        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-    },
-    {
-        title: "Looking for ML + Bio partner for ISEF",
-        profilePhoto: "https://github.com/shadcn.png",
-        name: "Shadcn",
-        pronouns: "he/him",
-        postDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString('en-US', { 
-            timeZone: 'America/Los_Angeles',
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true,
-            timeZoneName: 'short'
-        }),
-        grade: "10th Grade",
-        school: "Monta Vista High School",
-        skillsNeeded: ["biology", "machine-learning"],
-        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-    },
-    {
-        title: "Looking for ML + Bio partner for ISEF",
-        profilePhoto: "https://github.com/shadcn.png",
-        name: "Shadcn",
-        pronouns: "he/him",
-        postDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString('en-US', { 
-            timeZone: 'America/Los_Angeles',
-            month: 'numeric',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true,
-            timeZoneName: 'short'
-        }),
-        grade: "10th Grade",
-        school: "Monta Vista High School",
-        skillsNeeded: ["biology", "machine-learning", "fun"],
-        private: false,
-        protected: true,
-        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-    }
-]
+// Define the request type based on what we expect from Supabase
+interface Request {
+    id: string;
+    title: string;
+    description: string;
+    creator_id: string;
+    created_at: string;
+    visibility: "public" | "private";
+    skills: Array<{ label: string; slug: string; custom: boolean }>;
+    member_goal: number;
+    member_count: number;
+    creator_profile?: {
+        name: string;
+        pronouns?: string;
+        profile_photo?: string;
+        grade?: string;
+        school?: string;
+    };
+}
 
 const tags = [
     "machine-learning",
@@ -113,11 +71,116 @@ const tags = [
 export default function Requests() {
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<string[]>([]);
+    const [requests, setRequests] = useState<Request[]>([]);
+    const [loading, setLoading] = useState(true);
+    const supabase = createClient();
+    const router = useRouter();
 
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearch(e.target.value);
+    }
 
-        // Filter based on tags
+    // Handle messaging functionality
+    const handleMessage = async (creatorId: string) => {
+        try {
+            const response = await fetch('/api/conversations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user2_id: creatorId
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                toast.error("Error starting conversation:", {
+                    description: error.error,
+                });
+                return;
+            }
+
+            const conversation = await response.json();
+            // Navigate to messages page with the conversation
+            router.push(`/messages?conversation=${conversation.id}`);
+        } catch (error) {
+            toast.error("Error starting conversation:", {
+                description: "An unexpected error occurred",
+            });
+        }
+    };
+
+    // Fetch requests from Supabase
+    const fetchRequests = async () => {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('collab_requests')
+                .select(`
+                    id,
+                    title,
+                    description,
+                    creator_id,
+                    created_at,
+                    visibility,
+                    skills,
+                    member_goal,
+                    member_count,
+                    profiles!collab_requests_creator_id_fkey (
+                        name,
+                        pronouns,
+                        profile_photo,
+                        grade,
+                        school
+                    )
+                `)
+                .eq('visibility', 'public')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                toast.error("Error fetching requests:", {
+                    description: error.message,
+                });
+                return;
+            }
+
+            setRequests(data || []);
+        } catch (error) {
+            toast.error("Error fetching requests:", {
+                description: "An unexpected error occurred",
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests();
+    }, []);
+
+    // Filter requests based on search and selected tags
+    const filteredRequests = requests.filter(request => {
+        const matchesSearch = search === "" || 
+            request.title.toLowerCase().includes(search.toLowerCase()) ||
+            request.description.toLowerCase().includes(search.toLowerCase()) ||
+            (request.creator_profile?.name || "").toLowerCase().includes(search.toLowerCase());
+        
+        const matchesTags = selected.length === 0 || 
+            selected.some(tag => request.skills.some(skill => skill.slug === tag));
+        
+        return matchesSearch && matchesTags;
+    });
+
+    if (loading) {
+        return (
+            <div className={``}>
+                <p className={`text-xl font-semibold mb-4 text-center`}>Explore Requests</p>
+                <div className={`flex items-center justify-center h-64`}>
+                    <p className={`text-foreground/75`}>Loading requests...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -159,58 +222,118 @@ export default function Requests() {
                 </Popover>
                 <p className={`text-foreground/75 text-sm ml-1`}>{selected.length} Filters Applied</p>
                 <div className={`h-5 mx-1.5 w-px rounded-full bg-foreground/15`} />
-                <p className={`text-foreground/75 text-sm`}>3 of 3 Results</p>
+                <p className={`text-foreground/75 text-sm`}>{filteredRequests.length} of {requests.length} Results</p>
             </div>
             <div className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3`}>
-                {requests.map((request, index) => {
-                    return (
-                        <div key={index} className={`border rounded-lg p-3.5`}>
-                            <div className={`flex gap-5`}>
-                                <img src={request.profilePhoto} alt="profile-photo" className={`w-10 h-10 rounded-full`} />
-                                <div className={`flex flex-col`}>
-                                    <p className={`text-lg font-semibold text-foreground`}>{request.name} <span className={`text-sm text-gray-500 font-normal`}>{request.pronouns}</span></p>
-                                    <p className={`text-sm text-gray-500`}>{request.postDate}</p>
+                {filteredRequests.length === 0 ? (
+                    <div className={`col-span-full flex items-center justify-center h-32`}>
+                        <p className={`text-foreground/75`}>No requests found matching your criteria.</p>
+                    </div>
+                ) : (
+                    filteredRequests.map((request, index) => {
+                        const postDate = new Date(request.created_at).toLocaleString('en-US', { 
+                            timeZone: 'America/Los_Angeles',
+                            month: 'numeric',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: 'numeric',
+                            hour12: true,
+                            timeZoneName: 'short'
+                        });
+
+                        return (
+                            <div key={request.id} className={`border rounded-lg p-3.5`}>
+                                <div className={`flex gap-5`}>
+                                    <img 
+                                        src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                                        alt="profile-photo" 
+                                        className={`w-10 h-10 rounded-full`} 
+                                    />
+                                    <div className={`flex flex-col`}>
+                                        <p className={`text-lg font-semibold text-foreground`}>
+                                            {request.creator_profile?.name || "Unknown User"} 
+                                            <span className={`text-sm text-gray-500 font-normal`}>
+                                                {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                                            </span>
+                                        </p>
+                                        <p className={`text-sm text-gray-500`}>{postDate}</p>
+                                    </div>
+                                </div>
+                                <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
+                                <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
+                                <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
+                                    {request.skills.map((skill, index2) => {
+                                        return (
+                                            <p 
+                                                onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 
+                                                key={index2} 
+                                                className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
+                                            >
+                                                #{skill.slug}
+                                            </p>
+                                        )
+                                    })}
+                                </div>
+                                <div className={`grid grid-cols-2 gap-3.5`}>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant={`default`} className={`cursor-pointer w-full`}>View</Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader className={`flex items-center flex-row gap-5`}>
+                                                <img 
+                                                    src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                                                    alt="profile-photo" 
+                                                    className={`w-10 h-10 rounded-full`} 
+                                                />
+                                                <div className={`flex flex-col justify-start items-start`}>
+                                                    <p className={`text-lg font-semibold text-foreground`}>
+                                                        {request.creator_profile?.name || "Unknown User"} 
+                                                        <span className={`text-sm text-gray-500 font-normal`}>
+                                                            {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                                                        </span>
+                                                    </p>
+                                                    <p className={`text-sm text-gray-500`}>{postDate}</p>
+                                                </div>
+                                            </DialogHeader>
+                                            <p className={`font-semibold`}>{request.title}</p>
+                                            <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
+                                            <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
+                                                {request.skills.map((skill, index2) => {
+                                                    return (
+                                                        <p 
+                                                            onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 
+                                                            key={index2} 
+                                                            className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
+                                                        >
+                                                            #{skill.slug}
+                                                        </p>
+                                                    )
+                                                })}
+                                            </div>
+                                            <Button 
+                                                variant={`secondary`} 
+                                                className={`cursor-pointer w-full`} 
+                                                size={`lg`}
+                                                onClick={() => handleMessage(request.creator_id)}
+                                            >
+                                                Message
+                                            </Button>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Button 
+                                        variant={`secondary`} 
+                                        className={`cursor-pointer w-full`}
+                                        onClick={() => handleMessage(request.creator_id)}
+                                    >
+                                        Message
+                                    </Button>
                                 </div>
                             </div>
-                            <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
-                            <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
-                            <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                {request.skillsNeeded.map((skill, index2) => {
-                                    return (
-                                        <p onClick={() => setSearch((currValue) => currValue + ", " + skill)} key={index2} className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}>#{skill}</p>
-                                    )
-                                })}
-                            </div>
-                            <div className={`grid grid-cols-2 gap-3.5`}>
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button variant={`default`} className={`cursor-pointer w-full`}>View</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader className={`flex items-center flex-row gap-5`}>
-                                            <img src={request.profilePhoto} alt="profile-photo" className={`w-10 h-10 rounded-full`} />
-                                            <div className={`flex flex-col justify-start items-start`}>
-                                                <p className={`text-lg font-semibold text-foreground`}>{request.name} <span className={`text-sm text-gray-500 font-normal`}>{request.pronouns}</span></p>
-                                                <p className={`text-sm text-gray-500`}>{request.postDate}</p>
-                                            </div>
-                                        </DialogHeader>
-                                        <p className={`font-semibold`}>{request.title}</p>
-                                        <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
-                                        <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                            {request.skillsNeeded.map((skill, index2) => {
-                                                return (
-                                                    <p onClick={() => setSearch((currValue) => currValue + ", " + skill)} key={index2} className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}>#{skill}</p>
-                                                )
-                                            })}
-                                        </div>
-                                        <Button variant={`secondary`} className={`cursor-pointer w-full`} size={`lg`}>{request.protected ? `Request to Message` : `Message`}</Button>
-                                    </DialogContent>
-                                </Dialog>
-                                <Button variant={`secondary`} className={`cursor-pointer w-full`}>{request.protected ? `Request to Message` : `Message`}</Button>
-                            </div>
-                        </div>
-                    )
-                })}
+                        )
+                    })
+                )}
             </div>
         </div>
     )
