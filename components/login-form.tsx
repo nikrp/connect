@@ -45,10 +45,14 @@ export function LoginForm() {
   }
 
   function signInWithGoogle() {
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/requests`
+      : `${process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000'}/requests`;
+    
     supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_HOST}/requests`
+        redirectTo: redirectUrl
       }
     }).then(({ data, error }) => {
       if (error) {
@@ -61,8 +65,12 @@ export function LoginForm() {
   }
 
   async function forgotPassword() {
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/reset-password`
+      : `${process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000'}/reset-password`;
+    
     const { data, error } = await supabase.auth.resetPasswordForEmail(form.getValues().email, { 
-      redirectTo: `${process.env.NEXT_PUBLIC_HOST}/reset-password`
+      redirectTo: redirectUrl
     }) 
     
     if (error) {

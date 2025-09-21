@@ -64,11 +64,15 @@ export function RegisterForm() {
   }
 
   function registerWithGoogle() {
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/onboarding`
+      : `${process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000'}/onboarding`;
+    
     const promise = () => new Promise((resolve, reject) => {
       supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_HOST}/onboarding`
+          redirectTo: redirectUrl
         }
       }).then(({ data, error }) => {
         if (error) {
