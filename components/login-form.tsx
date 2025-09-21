@@ -45,14 +45,10 @@ export function LoginForm() {
   }
 
   function signInWithGoogle() {
-    const redirectUrl = typeof window !== 'undefined' 
-      ? `${window.location.origin}/requests`
-      : `${process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000'}/requests`;
-    
     supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectUrl
+        redirectTo: `${window.location.origin}/requests`
       }
     }).then(({ data, error }) => {
       if (error) {
