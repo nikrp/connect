@@ -26,13 +26,15 @@ export default function Posts() {
 
   useEffect(() => {
     collectCollabRequests();
+  const handler = () => collectCollabRequests();
+  window.addEventListener('collab-changed', handler);
+  return () => window.removeEventListener('collab-changed', handler);
   }, []);
 
   return (
     <div className={``}>
       <p className={`text-xl font-semibold mb-4`}>My Posts</p>
       <RequestsTable refresh={collectCollabRequests} columns={columns} data={posts} />
-      <Toaster richColors />
     </div>
   )
 }

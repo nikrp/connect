@@ -26,22 +26,7 @@ export default function AppSidebar() {
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem className={`p-0`}>
-                        <SidebarMenuButton asChild size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Messages`}>
-                            <Link href="/messages">
-                                <MessageCircleIcon className={`hover:bg-none size-6`} />
-                                <span className={`md:hidden`}>Messages</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem className={`p-0`}>
-                        <SidebarMenuButton asChild size={`lg`} className={`p-0 cursor-pointer`} tooltip={`Saved`}>
-                            <Link href="/saved">
-                                <BookmarkIcon className={`hover:bg-none size-6`} />
-                                <span className={`md:hidden`}>Saved Posts</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {/* Messages and Saved removed per requirements */}
                 </SidebarMenu>
             </SidebarContent>
             <SidebarFooter></SidebarFooter>

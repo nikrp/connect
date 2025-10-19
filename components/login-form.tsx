@@ -55,7 +55,7 @@ export function LoginForm() {
         console.error(error);
         toast.error("Something went wrong! If this issue persists please contact support.");
       } else {        
-        toast.success("Signed in successfully!");
+  // OAuth will redirect — don't show a premature success toast here.
       }
     });
   }

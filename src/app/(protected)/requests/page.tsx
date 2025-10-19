@@ -76,6 +76,10 @@ export default function Requests() {
     const supabase = createClient();
     const router = useRouter();
 
+    // Diagnostic: log when component function runs
+    // (this runs on each render) — helps confirm mounting
+    console.log('[Requests] render - requests length:', requests.length);
+
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearch(e.target.value);
     }
@@ -117,57 +121,45 @@ export default function Requests() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('collab_requests')
-                .select(`
-                    id,
-                    title,
-                    description,
-                    creator_id,
-                    created_at,
-                    visibility,
-                    skills,
-                    member_goal,
-                    member_count,
-                    profiles!collab_requests_creator_id_fkey (
-                        name,
-                        pronouns,
-                        profile_photo,
-                        grade,
-                        school
-                    )
-                `)
+                .select('*')
                 .eq('visibility', 'public')
                 .order('created_at', { ascending: false });
 
             if (error) {
-                toast.error("Error fetching requests:", {
-                    description: error.message,
-                });
+                console.error('[Requests] fetchRequests supabase error:', error);
+                toast.error("Error fetching requests:", { description: error.message });
                 return;
             }
 
+            console.log('[Requests] fetched data:', data);
             setRequests(data || []);
         } catch (error) {
-            toast.error("Error fetching requests:", {
-                description: "An unexpected error occurred",
-            });
+            console.error('[Requests] fetchRequests unexpected error:', error);
+            toast.error("Error fetching requests:", { description: (error as any)?.message || 'Unexpected error' });
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
+        console.log('[Requests] useEffect mount');
+        try {
+            toast.info("Loading requests...");
+        } catch (err) {
+            console.warn('[Requests] toast.info failed:', err);
+        }
         fetchRequests();
     }, []);
 
     // Filter requests based on search and selected tags
     const filteredRequests = requests.filter(request => {
         const matchesSearch = search === "" || 
-            request.title.toLowerCase().includes(search.toLowerCase()) ||
-            request.description.toLowerCase().includes(search.toLowerCase()) ||
+            (request.title || "").toLowerCase().includes(search.toLowerCase()) ||
+            (request.description || "").toLowerCase().includes(search.toLowerCase()) ||
             (request.creator_profile?.name || "").toLowerCase().includes(search.toLowerCase());
         
         const matchesTags = selected.length === 0 || 
-            selected.some(tag => request.skills.some(skill => skill.slug === tag));
+            selected.some(tag => Array.isArray(request.skills) && request.skills.some((skill: any) => skill.slug === tag));
         
         return matchesSearch && matchesTags;
     });
@@ -263,7 +255,7 @@ export default function Requests() {
                                 <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
                                 <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
                                 <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                    {request.skills.map((skill, index2) => {
+                                    {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
                                         return (
                                             <p 
                                                 onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 
@@ -300,7 +292,7 @@ export default function Requests() {
                                             <p className={`font-semibold`}>{request.title}</p>
                                             <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
                                             <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                                {request.skills.map((skill, index2) => {
+                                                {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
                                                     return (
                                                         <p 
                                                             onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 

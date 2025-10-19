@@ -49,6 +49,7 @@ export function RegisterForm() {
       });
 
       if (error) {
+        console.log(error.message)
         reject(error.message);
       } else {
         router.push(`/onboarding?name=${values.name}`);

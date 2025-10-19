@@ -37,6 +37,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
+import { Profile } from "../../../../types/profile";
 
 interface RequestsTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
@@ -47,7 +48,7 @@ interface RequestsTableProps<TData, TValue> {
 export function RequestsTable<TData, TValue>({ columns, data, refresh }: RequestsTableProps<TData, TValue>) {
     const supabase = createClient();
     const [dialougeOpen, setDialougeOpen] = useState(false);
-    const { user, setUser, profile, setProfile } : { user: User, setUser: (user: User) => void, profile: object, setProfile: (profile: object) => void } = useUser();
+    const { user, setUser, profile, setProfile } : { user: User | null, setUser: (user: User | null) => void, profile: Profile | null, setProfile: (profile: Profile | null) => void } = useUser();
     const createForm = useForm<z.infer<typeof createPostSchema>>({
         resolver: zodResolver(createPostSchema),
         defaultValues: {

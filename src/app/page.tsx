@@ -128,6 +128,7 @@ export default function Home() {
   const router = useRouter();
   const [timeRange, setTimeRange] = useState("90d");
   const [email, setEmail] = useState("");
+  const [user, setUser] = useState<any>(null);
 
   const filteredData = data.filter((item) => {
     const date = new Date(item.date)
@@ -146,8 +147,13 @@ export default function Home() {
   useEffect(() => {
     async function collectSession() {
       const session = await supabase.auth.getUser();
+  setUser(session.data.user || null);
 
-      if (session.data.user) {
+      // If the URL contains ?noRedirect=1 we should not auto-redirect when arriving from the Connect button.
+      const params = new URLSearchParams(window.location.search);
+      const noRedirect = params.get('noRedirect');
+
+      if (session.data.user && noRedirect !== '1') {
         router.push("/requests");
       }
     }
@@ -296,7 +302,11 @@ export default function Home() {
           </NavigationMenuList>
         </NavigationMenu>
         <div className={`flex items-center gap-3.5`}>
-          <Link href={`/login`}><Button className={`cursor-pointer`} variant={`default`}>Sign In</Button></Link>
+          {user ? (
+            <Link href={`/requests`}><Button className={`cursor-pointer`} variant={`default`}>Go to Requests</Button></Link>
+          ) : (
+            <Link href={`/login`}><Button className={`cursor-pointer`} variant={`default`}>Sign In</Button></Link>
+          )}
         </div>
       </div>
 

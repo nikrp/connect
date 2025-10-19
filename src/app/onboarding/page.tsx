@@ -5,6 +5,7 @@ import Basic from "@/components/onboarding/basic";
 import Privacy from "@/components/onboarding/privacy";
 import SkillsInterests from "@/components/onboarding/skills-interests";
 import Welcome from "@/components/onboarding/welcome";
+import Contact from "@/components/onboarding/contact";
 import Galaxy from "@/components/react-bits/galaxy";
 import { createClient } from "@/lib/supabase/client";
 import { Progress } from "@/src/components/animate-ui/radix/progress";
@@ -25,6 +26,11 @@ const steps = [
         title: "Skills & Interests",
         description: "What are you good at? What do you like?",
         component: SkillsInterests,
+    },
+    {
+        title: "Contact",
+        description: "How can teammates reach you?",
+        component: Contact,
     },
     {
         title: "Availability",
