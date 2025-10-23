@@ -58,7 +58,7 @@ export default function Availability({ setStep, setBigForm, bigForm }: { setStep
     }, [bigForm.timezone, bigForm.preferredWorkTimes]);
 
     const onSubmit = (values: z.infer<typeof AvailabilitySchema>) => {
-        setStep(4);
+        setStep(5);
         setBigForm({...bigForm, ...values })
     }
     

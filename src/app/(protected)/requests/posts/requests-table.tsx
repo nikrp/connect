@@ -94,6 +94,8 @@ export function RequestsTable<TData, TValue>({ columns, data, refresh }: Request
                 <div className={``}>
                     <Input
                         placeholder="Filter titles..."
+                        // Add filtering functionality\
+                            
                         className={`w-64 md:w-96`}
                     />
                 </div>

@@ -4,8 +4,9 @@ import AppSidebar from "@/components/app-sidebar";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,9 @@ import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/contexts/UserContext";
+import { User } from "@supabase/supabase-js";
+import { Toaster } from "@/components/ui/sonner";
 
 // Define the request type based on what we expect from Supabase
 interface Request {
@@ -23,7 +27,7 @@ interface Request {
     creator_id: string;
     created_at: string;
     visibility: "public" | "private";
-    skills: Array<{ label: string; slug: string; custom: boolean }>;
+    tags: Array<{ label: string; slug: string; custom: boolean }>;
     member_goal: number;
     member_count: number;
     creator_profile?: {
@@ -121,7 +125,8 @@ export default function Requests() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('collab_requests')
-                .select('*')
+                // include the creator's profile (profiles.id => collab_requests.creator_id)
+                .select('*, creator_profile:profiles(id, name, profile_photo, pronouns)')
                 .eq('visibility', 'public')
                 .order('created_at', { ascending: false });
 
@@ -159,7 +164,7 @@ export default function Requests() {
             (request.creator_profile?.name || "").toLowerCase().includes(search.toLowerCase());
         
         const matchesTags = selected.length === 0 || 
-            selected.some(tag => Array.isArray(request.skills) && request.skills.some((skill: any) => skill.slug === tag));
+            selected.some(tag => Array.isArray(request.tags) && request.tags.some((t: any) => t.slug === tag));
         
         return matchesSearch && matchesTags;
     });
@@ -235,97 +240,200 @@ export default function Requests() {
                         });
 
                         return (
-                            <div key={request.id} className={`border rounded-lg p-3.5`}>
-                                <div className={`flex gap-5`}>
-                                    <img 
-                                        src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
-                                        alt="profile-photo" 
-                                        className={`w-10 h-10 rounded-full`} 
-                                    />
-                                    <div className={`flex flex-col`}>
-                                        <p className={`text-lg font-semibold text-foreground`}>
-                                            {request.creator_profile?.name || "Unknown User"} 
-                                            <span className={`text-sm text-gray-500 font-normal`}>
-                                                {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
-                                            </span>
-                                        </p>
-                                        <p className={`text-sm text-gray-500`}>{postDate}</p>
-                                    </div>
-                                </div>
-                                <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
-                                <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
-                                <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                    {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
-                                        return (
-                                            <p 
-                                                onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 
-                                                key={index2} 
-                                                className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
-                                            >
-                                                #{skill.slug}
-                                            </p>
-                                        )
-                                    })}
-                                </div>
-                                <div className={`grid grid-cols-2 gap-3.5`}>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant={`default`} className={`cursor-pointer w-full`}>View</Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader className={`flex items-center flex-row gap-5`}>
-                                                <img 
-                                                    src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
-                                                    alt="profile-photo" 
-                                                    className={`w-10 h-10 rounded-full`} 
-                                                />
-                                                <div className={`flex flex-col justify-start items-start`}>
-                                                    <p className={`text-lg font-semibold text-foreground`}>
-                                                        {request.creator_profile?.name || "Unknown User"} 
-                                                        <span className={`text-sm text-gray-500 font-normal`}>
-                                                            {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
-                                                        </span>
-                                                    </p>
-                                                    <p className={`text-sm text-gray-500`}>{postDate}</p>
-                                                </div>
-                                            </DialogHeader>
-                                            <p className={`font-semibold`}>{request.title}</p>
-                                            <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
-                                            <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                                {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
-                                                    return (
-                                                        <p 
-                                                            onClick={() => setSearch((currValue) => currValue + ", " + skill.slug)} 
-                                                            key={index2} 
-                                                            className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
-                                                        >
-                                                            #{skill.slug}
-                                                        </p>
-                                                    )
-                                                })}
-                                            </div>
-                                            <Button 
-                                                variant={`secondary`} 
-                                                className={`cursor-pointer w-full`} 
-                                                size={`lg`}
-                                                onClick={() => handleMessage(request.creator_id)}
-                                            >
-                                                Message
-                                            </Button>
-                                        </DialogContent>
-                                    </Dialog>
-                                    <Button 
-                                        variant={`secondary`} 
-                                        className={`cursor-pointer w-full`}
-                                        onClick={() => handleMessage(request.creator_id)}
-                                    >
-                                        Message
-                                    </Button>
-                                </div>
-                            </div>
+                            <RequestCard key={request.id} request={request} onMessage={() => handleMessage(request.creator_id)} refresh={fetchRequests} userCtx={useUser()} />
                         )
                     })
                 )}
+            </div>
+            <Toaster position={`top-right`} richColors />
+        </div>
+    )
+}
+
+function RequestCard({ request, onMessage, refresh, userCtx }: { request: Request; onMessage: () => void; refresh: () => void; userCtx: { user: User | null } | any }) {
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [joinOpen, setJoinOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState<string>("");
+    const [hasRequested, setHasRequested] = useState<boolean>(false);
+    const supabase = createClient();
+    const user = userCtx?.user as User | null;
+
+    // Check if the current user already has a join request/member row for this collab
+    useEffect(() => {
+        let mounted = true;
+        const checkExisting = async () => {
+            if (!user) return;
+            try {
+                const { data, error } = await supabase
+                    .from('collab_members')
+                    .select('id,status')
+                    .eq('collab_id', request.id)
+                    .eq('user_id', user.id)
+                    .limit(1);
+
+                if (error) {
+                    // don't flood the console for common permission errors, but log for debugging
+                    console.debug('Error checking existing collab_members:', error.message);
+                    return;
+                }
+
+                if (!mounted) return;
+                setHasRequested(Array.isArray(data) && data.length > 0);
+            } catch (err) {
+                console.debug('Unexpected error checking existing collab_members', err);
+            }
+        }
+
+        checkExisting();
+        return () => { mounted = false };
+    }, [request.id, user?.id]);
+
+    const postDate = new Date(request.created_at).toLocaleString('en-US', {
+        timeZone: 'America/Los_Angeles',
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZoneName: 'short'
+    });
+
+    const requestToJoin = async () => {
+        if (!user) {
+            toast.error('You must be logged in to request to join');
+            return;
+        }
+
+        if (hasRequested) {
+            toast.error('You have already requested to join this collab');
+            return;
+        }
+
+        setBusy(true);
+        try {
+            const { data, error } = await supabase.from('collab_members').insert([{
+                collab_id: request.id,
+                user_id: user.id,
+                status: 'pending',
+                message: message || null
+            }]);
+
+            if (error) {
+                console.error('Error inserting join request', error);
+                toast.error('Error requesting to join', { description: error.message });
+                return;
+            }
+
+            toast.success('Request to join sent');
+            // mark as requested so UI updates immediately
+            setHasRequested(true);
+            window.dispatchEvent(new CustomEvent('collab-join-request', { detail: { collabId: request.id, userId: user.id } }));
+            setJoinOpen(false);
+            setMessage('');
+            refresh();
+        } catch (err: any) {
+            console.error('Unexpected error requesting to join', err);
+            toast.error('Error requesting to join', { description: err?.message || 'Unexpected error' });
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    return (
+        <div className={`border rounded-lg p-3.5`}>
+            <div className={`flex gap-5`}>
+                <img 
+                    src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                    alt="profile-photo" 
+                    className={`w-10 h-10 rounded-full`} 
+                />
+                <div className={`flex flex-col`}>
+                    <p className={`text-lg font-semibold text-foreground`}>
+                        {request.creator_profile?.name || "Unknown User"} 
+                        <span className={`text-sm text-gray-500 font-normal`}>
+                            {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                        </span>
+                    </p>
+                    <p className={`text-sm text-gray-500`}>{postDate}</p>
+                </div>
+            </div>
+            <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
+            <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
+            <div className={`mb-2`}>
+                <p className={`text-sm text-foreground/70 mb-1.5`}>Skills needed:</p>
+                <div className={`flex flex-wrap gap-2`}>
+                    {(Array.isArray(request.tags) ? request.tags : []).map((skill: any, index2: number) => (
+                        <p 
+                            key={index2} 
+                            className={`px-2 py-0.5 rounded bg-accent text-sm text-primary`}
+                        >
+                            {skill.label}
+                        </p>
+                    ))}
+                </div>
+            </div>
+            <div className={`grid grid-cols-2 gap-3.5`}>
+                <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant={`default`} className={`cursor-pointer w-full`}>View</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader className={`flex items-center flex-row gap-5`}>
+                            <img 
+                                src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                                alt="profile-photo" 
+                                className={`w-10 h-10 rounded-full`} 
+                            />
+                            <div className={`flex flex-col justify-start items-start`}>
+                                <p className={`text-lg font-semibold text-foreground`}>
+                                    {request.creator_profile?.name || "Unknown User"} 
+                                    <span className={`text-sm text-gray-500 font-normal`}>
+                                        {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                                    </span>
+                                </p>
+                                <p className={`text-sm text-gray-500`}>{postDate}</p>
+                            </div>
+                        </DialogHeader>
+                        <p className={`font-semibold`}>{request.title}</p>
+                        <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
+                        <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
+                            {(Array.isArray(request.tags) ? request.tags : []).map((tag: any, index2: number) => {
+                                return (
+                                    <p key={index2} className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}>
+                                        {tag.label}
+                                    </p>
+                                )
+                            })}
+                        </div>
+                        {/* Message button removed per request */}
+                    </DialogContent>
+                </Dialog>
+
+                <div className="flex flex-col gap-2">
+                    {/* Message button removed per request */}
+                    <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant={hasRequested ? `outline` : `secondary`} className={`cursor-pointer w-full`} disabled={busy || hasRequested}>
+                                {hasRequested ? 'Requested' : 'Request to Join'}
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Request to Join</DialogTitle>
+                            </DialogHeader>
+                            <p className={`text-sm text-foreground/80 mt-2`}>Send a short message to the creator along with your request (optional).</p>
+                            <div className="mt-4">
+                                <Textarea value={message} onChange={(e: any) => setMessage(e.target.value)} placeholder={`Add a short message (optional)`} />
+                            </div>
+                            <DialogFooter className="mt-4">
+                                <Button variant="outline" onClick={() => setJoinOpen(false)} disabled={busy}>Cancel</Button>
+                                <Button onClick={requestToJoin} disabled={busy}>{busy ? 'Requesting...' : 'Send Request'}</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
     )

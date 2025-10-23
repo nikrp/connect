@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const ContactSchema = z.object({
     emails: z.array(z.string()).optional(),
@@ -24,6 +24,9 @@ export default function Contact({ setStep, setBigForm, bigForm }: { setStep: (st
         }
     });
 
+    const [emailsText, setEmailsText] = useState<string>((bigForm?.contact?.emails ?? []).join(', '));
+    const [phonesText, setPhonesText] = useState<string>((bigForm?.contact?.phones ?? []).join(', '));
+
     useEffect(() => {
         if (bigForm?.contact) {
             form.reset({
@@ -31,19 +34,23 @@ export default function Contact({ setStep, setBigForm, bigForm }: { setStep: (st
                 phones: bigForm.contact.phones ?? [],
                 linkedin: bigForm.contact.socials?.linkedin ?? '',
                 twitter: bigForm.contact.socials?.twitter ?? '',
-            })
+            });
+            setEmailsText((bigForm.contact.emails ?? []).join(', '));
+            setPhonesText((bigForm.contact.phones ?? []).join(', '));
         }
     }, [bigForm?.contact]);
 
-    const onSubmit = (values: z.infer<typeof ContactSchema>) => {
-        // normalize into contact shape
+    const onSubmit = (_values: z.infer<typeof ContactSchema>) => {
+        // normalize from the text fields into contact shape
+        const emails = String(emailsText || '').split(',').map(s => s.trim()).filter(Boolean);
+        const phones = String(phonesText || '').split(',').map(s => s.trim()).filter(Boolean);
         const contact = {
-            emails: values.emails ?? [],
-            phones: values.phones ?? [],
-            socials: { linkedin: values.linkedin ?? null, twitter: values.twitter ?? null }
+            emails,
+            phones,
+            socials: { linkedin: form.getValues('linkedin') ?? null, twitter: form.getValues('twitter') ?? null }
         }
         setBigForm({ ...bigForm, contact });
-        setStep((s: number) => s + 1);
+        setStep(4);
     }
 
     return (
@@ -57,7 +64,11 @@ export default function Contact({ setStep, setBigForm, bigForm }: { setStep: (st
                             <FormItem>
                                 <FormLabel>Emails (comma separated)</FormLabel>
                                 <FormControl>
-                                    <Input value={(field.value || []).join(', ')} onChange={(e) => field.onChange(String(e.target.value).split(',').map(s => s.trim()).filter(Boolean))} />
+                                    <Input
+                                        value={emailsText}
+                                        onChange={(e) => setEmailsText(e.target.value)}
+                                        onBlur={() => field.onChange(String(emailsText || '').split(',').map(s => s.trim()).filter(Boolean))}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -71,7 +82,11 @@ export default function Contact({ setStep, setBigForm, bigForm }: { setStep: (st
                             <FormItem>
                                 <FormLabel>Phone numbers (comma separated)</FormLabel>
                                 <FormControl>
-                                    <Input value={(field.value || []).join(', ')} onChange={(e) => field.onChange(String(e.target.value).split(',').map(s => s.trim()).filter(Boolean))} />
+                                    <Input
+                                        value={phonesText}
+                                        onChange={(e) => setPhonesText(e.target.value)}
+                                        onBlur={() => field.onChange(String(phonesText || '').split(',').map(s => s.trim()).filter(Boolean))}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

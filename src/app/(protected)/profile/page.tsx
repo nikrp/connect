@@ -274,14 +274,14 @@ export default function Profile() {
                                     <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
                                     <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
                                     <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                        {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
+                                        {(Array.isArray(request.tags) ? request.tags : []).map((tag: any, index2: number) => {
                                             return (
                                                 <p
                                                     onClick={() => setOpen(true)}
                                                     key={index2}
                                                     className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
                                                 >
-                                                    #{skill.slug}
+                                                    #{tag.slug}
                                                 </p>
                                             )
                                         })}
@@ -311,14 +311,14 @@ export default function Profile() {
                                                 <p className={`font-semibold`}>{request.title}</p>
                                                 <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
                                                 <div className={`mb-3.5 flex flex-wrap item-center gap-2.5`}>
-                                                    {(Array.isArray(request.skills) ? request.skills : []).map((skill: any, index2: number) => {
+                                                    {(Array.isArray(request.tags) ? request.tags : []).map((tag: any, index2: number) => {
                                                         return (
                                                             <p
                                                                 onClick={() => setOpen(true)}
                                                                 key={index2}
                                                                 className={`px-2 py-0.5 rounded bg-accent cursor-pointer hover:bg-accent/80 transition-all text-sm text-primary`}
                                                             >
-                                                                #{skill.slug}
+                                                                #{tag.slug}
                                                             </p>
                                                         )
                                                     })}

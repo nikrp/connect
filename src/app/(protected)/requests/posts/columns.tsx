@@ -5,7 +5,7 @@ import MembersCell from "./member-cell";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Copy, Eye, EyeClosed, Info, MoreHorizontal, Trash } from "lucide-react";
+import { Check, Copy, Eye, EyeClosed, Info, MoreHorizontal, Trash, X } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "../../../../types/profile";
@@ -44,7 +44,7 @@ export const columns: ColumnDef<Post>[] = [
     {
         accessorKey: "members",
         header: "Members",
-        cell: info => <MembersCell userIds={(info.getValue() as object[]).map((n: any) => n.user_id)} />
+        cell: info => <MembersCell userIds={(info.getValue() as object[]).filter((m: any) => m.status === 'accepted').map((n: any) => n.user_id)} />
     },
     {
         accessorKey: "tags",
@@ -75,13 +75,39 @@ export const columns: ColumnDef<Post>[] = [
         id: "actions",
         cell: ({ row }) => {
             const collab = row.original;
+            console.log(collab)
             const { user, setUser, profile, setProfile } : { user: User | null, setUser: (user: User | null) => void, profile: Profile | null, setProfile: (profile: Profile | null) => void } = useUser();
 
             function ActionMenu() {
+                // Efficient pending member profile fetching
+                const [detailsOpen, setDetailsOpen] = useState(false);
+                const [pendingProfiles, setPendingProfiles] = useState<Record<string, any>>({});
+                useEffect(() => {
+                    if (!detailsOpen) return;
+                    const pendingMembers = collab.members?.filter((m: any) => m.status === 'pending') || [];
+                    const idsToFetch = pendingMembers.filter((m: any) => !pendingProfiles[m.user_id]).map((m: any) => m.user_id);
+                    if (idsToFetch.length === 0) return;
+                    let mounted = true;
+                    const supabase = createClient();
+                    supabase
+                        .from('profiles')
+                        .select('id, name, profile_photo, school')
+                        .in('id', idsToFetch)
+                        .then(({ data }) => {
+                            if (!mounted || !data) return;
+                            setPendingProfiles(prev => {
+                                const next = { ...prev };
+                                for (const profile of data) {
+                                    next[profile.id] = profile;
+                                }
+                                return next;
+                            });
+                        });
+                    return () => { mounted = false };
+                }, [detailsOpen, collab.members]);
                 const [busy, setBusy] = useState(false);
                 const [confirmOpen, setConfirmOpen] = useState(false);
                 const [confirmType, setConfirmType] = useState<'delete'|'toggle'|null>(null);
-                const [detailsOpen, setDetailsOpen] = useState(false);
                 const [creatorProfile, setCreatorProfile] = useState<any | null>(null);
                 const [creatorLoading, setCreatorLoading] = useState(false);
 
@@ -134,7 +160,7 @@ export const columns: ColumnDef<Post>[] = [
                         setCreatorLoading(true);
                         const supabase = createClient();
                         try {
-                            const { data, error } = await supabase.from('profiles').select('id, name, avatar_url, school, email').eq('id', collab.creator_id).single();
+                            const { data, error } = await supabase.from('profiles').select('id, name, profile_photo, school').eq('id', collab.creator_id).single();
                             if (error) throw error;
                             if (mounted) setCreatorProfile(data ?? null);
                         } catch (err:any) {
@@ -152,9 +178,14 @@ export const columns: ColumnDef<Post>[] = [
                     <>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={busy}>
+                            <Button variant="ghost" className="h-8 w-8 p-0 relative" disabled={busy}>
                                 <span className="sr-only">Open menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
+                                {collab.members?.some((m: any) => m.status === 'pending') && (
+                                    <Badge variant={`default`} className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 p-0 flex items-center justify-center text-xs">
+                                        {/* {collab.members.filter((m: any) => m.status === 'pending').length} */}
+                                    </Badge>
+                                )}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -163,9 +194,14 @@ export const columns: ColumnDef<Post>[] = [
                                 <Copy />
                                 <span>Copy Collab ID</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className={`cursor-pointer`} onClick={() => setDetailsOpen(true)}>
+                            <DropdownMenuItem className={`cursor-pointer flex items-center gap-2`} onClick={() => setDetailsOpen(true)}>
                                 <Info />
                                 <span>View Details</span>
+                                {collab.members?.some((m: any) => m.status === 'pending') && (
+                                    <Badge variant={`default`} className="ml-auto">
+                                        {collab.members.filter((m: any) => m.status === 'pending').length} pending
+                                    </Badge>
+                                )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('toggle'); setConfirmOpen(true); }}>
@@ -246,7 +282,7 @@ export const columns: ColumnDef<Post>[] = [
                                                         <img src={creatorProfile.avatar_url} alt={creatorProfile.name || 'avatar'} className="h-8 w-8 rounded-full object-cover" />
                                                     ) : null}
                                                     <div className="flex flex-col">
-                                                        <span className="font-medium">{creatorProfile.name ?? creatorProfile.email ?? creatorProfile.id}</span>
+                                                        <span className="font-medium">{creatorProfile.name ?? creatorProfile.id}</span>
                                                         {creatorProfile.school ? <span className="text-xs text-foreground/70">{creatorProfile.school}</span> : null}
                                                     </div>
                                                 </div>
@@ -255,6 +291,89 @@ export const columns: ColumnDef<Post>[] = [
                                             )}
                                         </div>
                                     </div>
+                                    
+                                    {collab.members?.some((m: any) => m.status === 'pending') && (
+                                        <div>
+                                            <strong className="block text-xs text-foreground/70 mb-2">Pending Requests</strong>
+                                            <div className="space-y-3">
+                                                {collab.members
+                                                    .filter((m: any) => m.status === 'pending')
+                                                    .map((member: any) => {
+                                                        const profile = pendingProfiles[member.user_id];
+                                                        const handleAction = async (action: 'accept' | 'reject') => {
+                                                            setBusy(true);
+                                                            const supabase = createClient();
+                                                            try {
+                                                                if (action === 'reject') {
+                                                                    const { error } = await supabase
+                                                                        .from('collab_members')
+                                                                        .update({ status: 'rejected' })
+                                                                        .eq('user_id', member.user_id);
+                                                                    if (error) throw error;
+                                                                    toast.success('Request rejected');
+                                                                } else {
+                                                                    console.log(member.user_id);
+                                                                    // Add a check to make sure supabase is running correctly
+                                                                    const { error } = await supabase
+                                                                        .from('collab_members')
+                                                                        .update({ status: 'accepted' })
+                                                                        .eq('user_id', member.user_id);
+                                                                    if (error) throw error;
+                                                                    console.log("error:", error)
+                                                                    toast.success('Request accepted');
+                                                                }
+                                                                window.dispatchEvent(new CustomEvent('collab-changed'));
+                                                                //window.location.reload();
+                                                            } catch (err: any) {
+                                                                toast.error(`Failed to ${action} request`, {
+                                                                    description: err.message
+                                                                });
+                                                            } finally {
+                                                                setBusy(false);
+                                                            }
+                                                        };
+                                                        return (
+                                                            <div key={member.id} className="flex items-center justify-between p-3.5 rounded-lg border">
+                                                                <div className="flex items-center gap-3">
+                                                                    <img 
+                                                                        src={profile?.profile_photo || "https://github.com/shadcn.png"} 
+                                                                        alt="profile" 
+                                                                        className="h-8 w-8 rounded-full object-cover"
+                                                                    />
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">{profile?.name || 'Unknown User'}</span>
+                                                                        <span className="text-xs text-foreground/70">{profile?.school || ''}</span>
+                                                                        {member.message && (
+                                                                            <p className="text-xs text-foreground/70 mt-1 italic">"{member.message}"</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <Button 
+                                                                        variant="outline"
+                                                                        className={`cursor-pointer`}
+                                                                        size="sm"
+                                                                        disabled={busy}
+                                                                        onClick={() => handleAction('reject')}
+                                                                    >
+                                                                        <X className={`text-destructive`} />
+                                                                    </Button>
+                                                                    <Button 
+                                                                        variant="outline"
+                                                                        className={`cursor-pointer`}
+                                                                        size="sm"
+                                                                        disabled={busy}
+                                                                        onClick={() => handleAction('accept')}
+                                                                    >
+                                                                        <Check className={`text-emerald-400`} />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <DialogFooter>

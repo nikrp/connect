@@ -69,7 +69,7 @@ export default function Onboarding() {
                     </div>
                 </div>
                 <div className={`grid w-full grid-cols-1 gap-2 my-5 mb-20`}>
-                    <Progress value={((step + 1) / 5) * 100} />
+                    <Progress value={((step + 1) / 6) * 100} />
                 </div>
                 {step === 0 ? (
                     <>
