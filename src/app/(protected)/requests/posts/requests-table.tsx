@@ -59,11 +59,12 @@ export function RequestsTable<TData, TValue>({ columns, data, refresh }: Request
             member_goal: 1,  
         }
     })
+
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-    })
+    });
 
     const onSubmit = async (values: z.infer<typeof createPostSchema>) => {
         // Insert to collab_requests table.        
@@ -94,8 +95,6 @@ export function RequestsTable<TData, TValue>({ columns, data, refresh }: Request
                 <div className={``}>
                     <Input
                         placeholder="Filter titles..."
-                        // Add filtering functionality\
-                            
                         className={`w-64 md:w-96`}
                     />
                 </div>

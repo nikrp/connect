@@ -75,7 +75,6 @@ export const columns: ColumnDef<Post>[] = [
         id: "actions",
         cell: ({ row }) => {
             const collab = row.original;
-            console.log(collab)
             const { user, setUser, profile, setProfile } : { user: User | null, setUser: (user: User | null) => void, profile: Profile | null, setProfile: (profile: Profile | null) => void } = useUser();
 
             function ActionMenu() {
@@ -312,8 +311,6 @@ export const columns: ColumnDef<Post>[] = [
                                                                     if (error) throw error;
                                                                     toast.success('Request rejected');
                                                                 } else {
-                                                                    console.log(member.user_id);
-                                                                    // Add a check to make sure supabase is running correctly
                                                                     const { error } = await supabase
                                                                         .from('collab_members')
                                                                         .update({ status: 'accepted' })
