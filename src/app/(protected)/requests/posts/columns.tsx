@@ -5,7 +5,7 @@ import MembersCell from "./member-cell";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Eye, EyeClosed, Info, MoreHorizontal, Trash, X } from "lucide-react";
+import { Check, Copy, Eye, EyeClosed, Info, LogOut, MoreHorizontal, Trash, X } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "../../../../types/profile";
@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export type Post = {
     id: string
@@ -81,6 +82,7 @@ export const columns: ColumnDef<Post>[] = [
                 // Efficient pending member profile fetching
                 const [detailsOpen, setDetailsOpen] = useState(false);
                 const [pendingProfiles, setPendingProfiles] = useState<Record<string, any>>({});
+                const [memberProfiles, setMemberProfiles] = useState<Record<string, any>>({});
                 useEffect(() => {
                     if (!detailsOpen) return;
                     const pendingMembers = collab.members?.filter((m: any) => m.status === 'pending') || [];
@@ -104,11 +106,59 @@ export const columns: ColumnDef<Post>[] = [
                         });
                     return () => { mounted = false };
                 }, [detailsOpen, collab.members]);
+                useEffect(() => {
+                    if (!detailsOpen) return;
+                    const acceptedMembers = collab.members?.filter((m: any) => m.status === 'accepted') || [];
+                    const idsToFetch = acceptedMembers.filter((m: any) => !memberProfiles[m.user_id]).map((m: any) => m.user_id);
+                    if (idsToFetch.length === 0) return;
+                    let mounted = true;
+                    const supabase = createClient();
+                    supabase
+                        .from('profiles')
+                        .select('id, name, profile_photo, school')
+                        .in('id', idsToFetch)
+                        .then(({ data }) => {
+                            if (!mounted || !data) return;
+                            setMemberProfiles(prev => {
+                                const next = { ...prev };
+                                for (const profile of data) {
+                                    next[profile.id] = profile;
+                                }
+                                return next;
+                            });
+                        });
+                    return () => { mounted = false };
+                }, [detailsOpen, collab.members]);
                 const [busy, setBusy] = useState(false);
                 const [confirmOpen, setConfirmOpen] = useState(false);
                 const [confirmType, setConfirmType] = useState<'delete'|'toggle'|null>(null);
                 const [creatorProfile, setCreatorProfile] = useState<any | null>(null);
                 const [creatorLoading, setCreatorLoading] = useState(false);
+
+                // Leave collab (for non-creators)
+                const leaveCollab = async () => {
+                    if (!user) {
+                        toast.error('You must be logged in to leave a collab');
+                        return;
+                    }
+                    setBusy(true);
+                    const supabase = createClient();
+                    try {
+                        const { error } = await supabase
+                            .from('collab_members')
+                            .delete()
+                            .eq('collab_id', collab.id)
+                            .eq('user_id', user.id);
+                        if (error) throw error;
+                        toast.success('You left the collab');
+                        // notify listeners to refresh
+                        window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'left' } }));
+                    } catch (err: any) {
+                        toast.error('Failed to leave collab', { description: err.message });
+                    } finally {
+                        setBusy(false);
+                    }
+                }
 
                 const onConfirm = async () => {
                     setConfirmOpen(false);
@@ -203,14 +253,21 @@ export const columns: ColumnDef<Post>[] = [
                                 )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('toggle'); setConfirmOpen(true); }}>
-                                {collab.visibility === `public` ? <EyeClosed /> : <Eye />}
-                                <span>{busy ? 'Working...' : `Make ${collab.visibility === `public` ? "Private" : "Public"}`}</span>
-                            </DropdownMenuItem>
-                            {collab.creator_id === user?.id && (
-                                <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('delete'); setConfirmOpen(true); }}>
-                                    <Trash />
-                                    <span>{busy ? 'Working...' : 'Delete'}</span>
+                            {collab.creator_id === user?.id ? (
+                                <>
+                                    <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('toggle'); setConfirmOpen(true); }}>
+                                        {collab.visibility === `public` ? <EyeClosed /> : <Eye />}
+                                        <span>{busy ? 'Working...' : `Make ${collab.visibility === `public` ? "Private" : "Public"}`}</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('delete'); setConfirmOpen(true); }}>
+                                        <Trash />
+                                        <span>{busy ? 'Working...' : 'Delete'}</span>
+                                    </DropdownMenuItem>
+                                </>
+                            ) : (
+                                <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={leaveCollab}>
+                                    <LogOut />
+                                    <span>{busy ? 'Working...' : 'Leave collab'}</span>
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>
@@ -257,6 +314,41 @@ export const columns: ColumnDef<Post>[] = [
                                         <strong className="block text-xs text-foreground/70">Members</strong>
                                         <div className="mt-1 text-sm">{collab.member_count ?? (Array.isArray(collab.members) ? collab.members.length : '—')}</div>
                                     </div>
+
+                                    {collab.members?.some((m: any) => m.status === 'accepted') && (
+                                        <div>
+                                            <strong className="block text-xs text-foreground/70 mb-2">Team</strong>
+                                            <div className="space-y-3">
+                                                {collab.members
+                                                    .filter((m: any) => m.status === 'accepted')
+                                                    .map((member: any) => {
+                                                        const profile = memberProfiles[member.user_id];
+                                                        return (
+                                                            <div key={member.user_id} className="flex items-center justify-between rounded-lg border p-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <img
+                                                                        src={profile?.profile_photo || "https://github.com/shadcn.png"}
+                                                                        alt="profile"
+                                                                        className="h-8 w-8 rounded-full object-cover"
+                                                                    />
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">{profile?.name || member.user_id}</span>
+                                                                        {profile?.school && (
+                                                                            <span className="text-xs text-foreground/60">{profile.school}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <Button asChild variant="outline" size="sm">
+                                                                    <Link href={`/requests/posts/${member.user_id}`}>
+                                                                        View profile
+                                                                    </Link>
+                                                                </Button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>

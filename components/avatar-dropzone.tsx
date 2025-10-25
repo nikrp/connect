@@ -6,8 +6,8 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 type Props = {
-    value: File | undefined
-    onChange: (file: File) => void
+    value?: File | string | null
+    onChange: (file: File | null) => void
   }
   
 

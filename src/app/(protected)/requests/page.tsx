@@ -1,23 +1,23 @@
 "use client"
 
-import AppSidebar from "@/components/app-sidebar";
-import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+// removed inline Dialog usage; shared RequestCard manages its own dialogs
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Check, Filter } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+// Link not needed after refactor to shared RequestCard
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
 import { Toaster } from "@/components/ui/sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 // Define the request type based on what we expect from Supabase
 interface Request {
@@ -30,6 +30,7 @@ interface Request {
     tags: Array<{ label: string; slug: string; custom: boolean }>;
     member_goal: number;
     member_count: number;
+    matchScore?: number;
     creator_profile?: {
         name: string;
         pronouns?: string;
@@ -72,13 +73,21 @@ const tags = [
     
 ]
 
+// Get color based on match score (red-yellow-green spectrum)
+const getMatchColor = (score: number) => {
+    if (score >= 70) return 'rgb(34, 197, 94)'; // green
+    if (score >= 40) return 'rgb(234, 179, 8)'; // yellow
+    return 'rgb(239, 68, 68)'; // red
+};
+
 export default function Requests() {
     const [search, setSearch] = useState("");
     const [selected, setSelected] = useState<string[]>([]);
     const [requests, setRequests] = useState<Request[]>([]);
     const [loading, setLoading] = useState(true);
+    const [userProfile, setUserProfile] = useState<any>(null);
     const supabase = createClient();
-    const router = useRouter();
+    const { user } = useUser() as any;
 
     // Diagnostic: log when component function runs
     // (this runs on each render) — helps confirm mounting
@@ -88,47 +97,69 @@ export default function Requests() {
         setSearch(e.target.value);
     }
 
-    // Handle messaging functionality
-    const handleMessage = async (creatorId: string) => {
-        try {
-            const response = await fetch('/api/conversations', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user2_id: creatorId
-                })
-            });
+    // Messaging disabled in explore card UI; the shared card only supports View / Request to Join
 
-            if (!response.ok) {
-                const error = await response.json();
-                toast.error("Error starting conversation:", {
-                    description: error.error,
-                });
-                return;
-            }
-
-            const conversation = await response.json();
-            // Navigate to messages page with the conversation
-            router.push(`/messages?conversation=${conversation.id}`);
-        } catch (error) {
-            toast.error("Error starting conversation:", {
-                description: "An unexpected error occurred",
-            });
+    // Calculate match score between user profile and request
+    const calculateMatchScore = (request: Request, userProfile: any): number => {
+        if (!userProfile) return 0;
+        
+        let score = 0;
+        let totalWeight = 0;
+        
+        // 1. Tag/Skills overlap (50% weight)
+        const userSkills = Array.isArray(userProfile.skills) ? userProfile.skills : [];
+        const requestTags = Array.isArray(request.tags) ? request.tags : [];
+        
+        if (userSkills.length > 0 && requestTags.length > 0) {
+            const userSkillSlugs = userSkills.map((s: any) => s.slug?.toLowerCase() || '');
+            const requestTagSlugs = requestTags.map((t: any) => t.slug?.toLowerCase() || '');
+            const matchingTags = requestTagSlugs.filter((tag: string) => userSkillSlugs.includes(tag));
+            const tagScore = (matchingTags.length / Math.max(requestTagSlugs.length, 1)) * 100;
+            score += tagScore * 0.5;
+            totalWeight += 0.5;
         }
+        
+        // 2. Interest alignment (30% weight)
+        const userInterests = Array.isArray(userProfile.interests) ? userProfile.interests : [];
+        if (userInterests.length > 0 && requestTags.length > 0) {
+            const userInterestSlugs = userInterests.map((i: any) => i.slug?.toLowerCase() || '');
+            const requestTagSlugs = requestTags.map((t: any) => t.slug?.toLowerCase() || '');
+            const matchingInterests = requestTagSlugs.filter((tag: string) => userInterestSlugs.includes(tag));
+            const interestScore = (matchingInterests.length / Math.max(requestTagSlugs.length, 1)) * 100;
+            score += interestScore * 0.3;
+            totalWeight += 0.3;
+        }
+        
+        // 3. Similarity bonus for exact skill matches (20% weight)
+        if (userSkills.length > 0 && requestTags.length > 0) {
+            const userSkillSlugs = userSkills.map((s: any) => s.slug?.toLowerCase() || '');
+            const requestTagSlugs = requestTags.map((t: any) => t.slug?.toLowerCase() || '');
+            const exactMatches = requestTagSlugs.filter((tag: string) => userSkillSlugs.includes(tag)).length;
+            const bonusScore = Math.min((exactMatches / userSkills.length) * 100, 100);
+            score += bonusScore * 0.2;
+            totalWeight += 0.2;
+        }
+        
+        return totalWeight > 0 ? Math.round(score / totalWeight) : 0;
     };
 
     // Fetch requests from Supabase
-    const fetchRequests = async () => {
+    const fetchRequests = async (currentUserId?: string) => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
+            // Build query and exclude current user's posts if user is available
+            let query = supabase
                 .from('collab_requests')
                 // include the creator's profile (profiles.id => collab_requests.creator_id)
                 .select('*, creator_profile:profiles(id, name, profile_photo, pronouns)')
                 .eq('visibility', 'public')
                 .order('created_at', { ascending: false });
+
+            if (currentUserId) {
+                query = query.neq('creator_id', currentUserId);
+            }
+
+            const { data, error } = await query;
 
             if (error) {
                 console.error('[Requests] fetchRequests supabase error:', error);
@@ -137,7 +168,17 @@ export default function Requests() {
             }
 
             console.log('[Requests] fetched data:', data);
-            setRequests(data || []);
+            
+            // Calculate match scores if user profile is available
+            const scoredRequests = (data || []).map(request => ({
+                ...request,
+                matchScore: userProfile ? calculateMatchScore(request, userProfile) : 0
+            }));
+            
+            // Sort by match score (highest first)
+            scoredRequests.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+            
+            setRequests(scoredRequests);
         } catch (error) {
             console.error('[Requests] fetchRequests unexpected error:', error);
             toast.error("Error fetching requests:", { description: (error as any)?.message || 'Unexpected error' });
@@ -146,6 +187,31 @@ export default function Requests() {
         }
     };
 
+    // Fetch user profile with skills and interests
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            if (!user?.id) return;
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('skills, interests')
+                    .eq('id', user.id)
+                    .single();
+                
+                if (error) {
+                    console.error('Error fetching user profile:', error);
+                    return;
+                }
+                
+                setUserProfile(data);
+            } catch (err) {
+                console.error('Error fetching user profile:', err);
+            }
+        };
+        
+        fetchUserProfile();
+    }, [user?.id]);
+
     useEffect(() => {
         console.log('[Requests] useEffect mount');
         try {
@@ -153,8 +219,8 @@ export default function Requests() {
         } catch (err) {
             console.warn('[Requests] toast.info failed:', err);
         }
-        fetchRequests();
-    }, []);
+        fetchRequests(user?.id);
+    }, [user?.id, userProfile]);
 
     // Filter requests based on search and selected tags
     const filteredRequests = requests.filter(request => {
@@ -227,37 +293,28 @@ export default function Requests() {
                         <p className={`text-foreground/75`}>No requests found matching your criteria.</p>
                     </div>
                 ) : (
-                    filteredRequests.map((request, index) => {
-                        const postDate = new Date(request.created_at).toLocaleString('en-US', { 
-                            timeZone: 'America/Los_Angeles',
-                            month: 'numeric',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: 'numeric',
-                            hour12: true,
-                            timeZoneName: 'short'
-                        });
-
-                        return (
-                            <RequestCard key={request.id} request={request} onMessage={() => handleMessage(request.creator_id)} refresh={fetchRequests} userCtx={useUser()} />
-                        )
-                    })
+                    filteredRequests.map((request) => (
+                        <RequestCard
+                            key={request.id}
+                            request={request}
+                            refresh={() => fetchRequests(user?.id)}
+                            user={user as User | null}
+                        />
+                    ))
                 )}
             </div>
             <Toaster position={`top-right`} richColors />
         </div>
     )
 }
-
-function RequestCard({ request, onMessage, refresh, userCtx }: { request: Request; onMessage: () => void; refresh: () => void; userCtx: { user: User | null } | any }) {
+ 
+function RequestCard({ request, refresh, user }: { request: Request; refresh: () => void; user: User | null }) {
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [joinOpen, setJoinOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string>("");
     const [hasRequested, setHasRequested] = useState<boolean>(false);
     const supabase = createClient();
-    const user = userCtx?.user as User | null;
 
     // Check if the current user already has a join request/member row for this collab
     useEffect(() => {
@@ -273,7 +330,6 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
                     .limit(1);
 
                 if (error) {
-                    // don't flood the console for common permission errors, but log for debugging
                     console.debug('Error checking existing collab_members:', error.message);
                     return;
                 }
@@ -313,7 +369,7 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
 
         setBusy(true);
         try {
-            const { data, error } = await supabase.from('collab_members').insert([{
+            const { error } = await supabase.from('collab_members').insert([{
                 collab_id: request.id,
                 user_id: user.id,
                 status: 'pending',
@@ -321,20 +377,17 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
             }]);
 
             if (error) {
-                console.error('Error inserting join request', error);
                 toast.error('Error requesting to join', { description: error.message });
                 return;
             }
 
             toast.success('Request to join sent');
-            // mark as requested so UI updates immediately
             setHasRequested(true);
             window.dispatchEvent(new CustomEvent('collab-join-request', { detail: { collabId: request.id, userId: user.id } }));
             setJoinOpen(false);
             setMessage('');
             refresh();
         } catch (err: any) {
-            console.error('Unexpected error requesting to join', err);
             toast.error('Error requesting to join', { description: err?.message || 'Unexpected error' });
         } finally {
             setBusy(false);
@@ -344,30 +397,45 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
     return (
         <div className={`border rounded-lg p-3.5`}>
             <div className={`flex gap-5`}>
-                <img 
-                    src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
-                    alt="profile-photo" 
-                    className={`w-10 h-10 rounded-full`} 
-                />
-                <div className={`flex flex-col`}>
-                    <p className={`text-lg font-semibold text-foreground`}>
-                        {request.creator_profile?.name || "Unknown User"} 
-                        <span className={`text-sm text-gray-500 font-normal`}>
-                            {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
-                        </span>
-                    </p>
-                    <p className={`text-sm text-gray-500`}>{postDate}</p>
-                </div>
+                <Link href={`/requests/posts/${request.creator_id}`} className="flex gap-5 items-center group">
+                    <img 
+                        src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                        alt="profile-photo" 
+                        className={`w-10 h-10 rounded-full`} 
+                    />
+                    <div className={`flex flex-col`}>
+                        <p className={`text-lg font-semibold text-foreground group-hover:underline`}>
+                            {request.creator_profile?.name || "Unknown User"} 
+                            <span className={`text-sm text-gray-500 font-normal`}>
+                                {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                            </span>
+                        </p>
+                        <p className={`text-sm text-gray-500`}>{postDate}</p>
+                    </div>
+                </Link>
             </div>
-            <p className={`font-semibold mt-3.5 mb-2`}>{request.title}</p>
+            <div className="flex items-center justify-between mt-3.5 mb-2">
+                <p className={`font-semibold`}>{request.title}</p>
+                {(request.matchScore !== undefined && request.matchScore > 0) && (
+                    <Badge
+                        variant="outline"
+                        className={`ml-2 flex items-center gap-1.5 ${request.matchScore === 100 ? "bg-accent/90 text-emerald-600 border-accent" : "bg-accent text-primary border-accent"}`}
+                    >
+                        <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: getMatchColor(request.matchScore) }}
+                        />
+                        {request.matchScore}% Match
+                    </Badge>
+                )}
+            </div>
             <p className={`text-foreground/80 line-clamp-3 text-sm mb-2`}>{request.description}</p>
             <div className={`mb-2`}>
-                <p className={`text-sm text-foreground/70 mb-1.5`}>Skills needed:</p>
                 <div className={`flex flex-wrap gap-2`}>
                     {(Array.isArray(request.tags) ? request.tags : []).map((skill: any, index2: number) => (
                         <p 
                             key={index2} 
-                            className={`px-2 py-0.5 rounded bg-accent text-sm text-primary`}
+                            className={`px-2 py-0.5 rounded bg-accent text-xs text-primary`}
                         >
                             {skill.label}
                         </p>
@@ -381,20 +449,22 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader className={`flex items-center flex-row gap-5`}>
-                            <img 
-                                src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
-                                alt="profile-photo" 
-                                className={`w-10 h-10 rounded-full`} 
-                            />
-                            <div className={`flex flex-col justify-start items-start`}>
-                                <p className={`text-lg font-semibold text-foreground`}>
-                                    {request.creator_profile?.name || "Unknown User"} 
-                                    <span className={`text-sm text-gray-500 font-normal`}>
-                                        {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
-                                    </span>
-                                </p>
-                                <p className={`text-sm text-gray-500`}>{postDate}</p>
-                            </div>
+                            <Link href={`/requests/posts/${request.creator_id}`} className="flex items-center gap-5 group">
+                                <img 
+                                    src={request.creator_profile?.profile_photo || "https://github.com/shadcn.png"} 
+                                    alt="profile-photo" 
+                                    className={`w-10 h-10 rounded-full`} 
+                                />
+                                <div className={`flex flex-col justify-start items-start`}>
+                                    <p className={`text-lg font-semibold text-foreground group-hover:underline`}>
+                                        {request.creator_profile?.name || "Unknown User"} 
+                                        <span className={`text-sm text-gray-500 font-normal`}>
+                                            {request.creator_profile?.pronouns ? ` (${request.creator_profile.pronouns})` : ""}
+                                        </span>
+                                    </p>
+                                    <p className={`text-sm text-gray-500`}>{postDate}</p>
+                                </div>
+                            </Link>
                         </DialogHeader>
                         <p className={`font-semibold`}>{request.title}</p>
                         <p className={`text-foreground/80 text-sm mb-1`}>{request.description}</p>
@@ -407,12 +477,10 @@ function RequestCard({ request, onMessage, refresh, userCtx }: { request: Reques
                                 )
                             })}
                         </div>
-                        {/* Message button removed per request */}
                     </DialogContent>
                 </Dialog>
 
                 <div className="flex flex-col gap-2">
-                    {/* Message button removed per request */}
                     <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
                         <DialogTrigger asChild>
                             <Button variant={hasRequested ? `outline` : `secondary`} className={`cursor-pointer w-full`} disabled={busy || hasRequested}>

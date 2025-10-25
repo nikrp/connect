@@ -103,10 +103,9 @@ export default function Navbar() {
                             <DropdownMenuItem asChild className={`cursor-pointer`}>
                                 <Link href="/settings">Settings</Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className={`cursor-pointer`}>Keyboard Shortcuts</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className={`cursor-pointer`}>Support</DropdownMenuItem>
-                            <DropdownMenuItem asChild variant={`destructive`} className={`flex items-center gap-2 cursor-pointer`}>
+                            <DropdownMenuItem asChild variant={`destructive`} className={`flex items-center gap-2 cursor-pointer w-full`}>
                                 <button onClick={() => supabase.auth.signOut().then(() => {router.push("/")}).catch(error => {console.error("Error signing out:", error)})}>
                                     <LogOutIcon /> Log out
                                 </button>
