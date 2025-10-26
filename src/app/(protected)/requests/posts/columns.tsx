@@ -5,15 +5,16 @@ import MembersCell from "./member-cell";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Eye, EyeClosed, Info, LogOut, MoreHorizontal, Trash, X } from "lucide-react";
+import { Check, Copy, Eye, EyeClosed, Info, LogOut, MoreHorizontal, Trash, UserMinus, X } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "../../../../types/profile";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type Post = {
     id: string
@@ -83,9 +84,10 @@ export const columns: ColumnDef<Post>[] = [
                 const [detailsOpen, setDetailsOpen] = useState(false);
                 const [pendingProfiles, setPendingProfiles] = useState<Record<string, any>>({});
                 const [memberProfiles, setMemberProfiles] = useState<Record<string, any>>({});
+                const acceptedMembers = useMemo(() => Array.isArray(collab.members) ? collab.members.filter((m: any) => m.status === 'accepted') : [], [collab.members]);
+                const pendingMembers = useMemo(() => Array.isArray(collab.members) ? collab.members.filter((m: any) => m.status === 'pending') : [], [collab.members]);
                 useEffect(() => {
-                    if (!detailsOpen) return;
-                    const pendingMembers = collab.members?.filter((m: any) => m.status === 'pending') || [];
+                    if (!detailsOpen || pendingMembers.length === 0) return;
                     const idsToFetch = pendingMembers.filter((m: any) => !pendingProfiles[m.user_id]).map((m: any) => m.user_id);
                     if (idsToFetch.length === 0) return;
                     let mounted = true;
@@ -105,10 +107,9 @@ export const columns: ColumnDef<Post>[] = [
                             });
                         });
                     return () => { mounted = false };
-                }, [detailsOpen, collab.members]);
+                }, [detailsOpen, pendingMembers, pendingProfiles]);
                 useEffect(() => {
-                    if (!detailsOpen) return;
-                    const acceptedMembers = collab.members?.filter((m: any) => m.status === 'accepted') || [];
+                    if (!detailsOpen || acceptedMembers.length === 0) return;
                     const idsToFetch = acceptedMembers.filter((m: any) => !memberProfiles[m.user_id]).map((m: any) => m.user_id);
                     if (idsToFetch.length === 0) return;
                     let mounted = true;
@@ -128,7 +129,7 @@ export const columns: ColumnDef<Post>[] = [
                             });
                         });
                     return () => { mounted = false };
-                }, [detailsOpen, collab.members]);
+                }, [detailsOpen, acceptedMembers, memberProfiles]);
                 const [busy, setBusy] = useState(false);
                 const [confirmOpen, setConfirmOpen] = useState(false);
                 const [confirmType, setConfirmType] = useState<'delete'|'toggle'|null>(null);
@@ -155,6 +156,57 @@ export const columns: ColumnDef<Post>[] = [
                         window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'left' } }));
                     } catch (err: any) {
                         toast.error('Failed to leave collab', { description: err.message });
+                    } finally {
+                        setBusy(false);
+                    }
+                }
+
+                const removeMember = async (memberId: string) => {
+                    if (!user) {
+                        toast.error('You must be logged in to manage members');
+                        return;
+                    }
+                    if (user.id !== collab.creator_id) {
+                        toast.error('Only the owner can remove members');
+                        return;
+                    }
+                    if (memberId === collab.creator_id) {
+                        toast.error('The owner cannot be removed');
+                        return;
+                    }
+                    setBusy(true);
+                    const supabase = createClient();
+                    try {
+                        const { error } = await supabase
+                            .from('collab_members')
+                            .delete()
+                            .eq('collab_id', collab.id)
+                            .eq('user_id', memberId);
+                        if (error) throw error;
+                        toast.success('Member removed');
+                        window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'member-removed', userId: memberId } }));
+                    } catch (err: any) {
+                        toast.error('Failed to remove member', { description: err.message });
+                    } finally {
+                        setBusy(false);
+                    }
+                }
+
+                const handleRequestStatus = async (memberId: string, action: 'accept' | 'reject') => {
+                    setBusy(true);
+                    const supabase = createClient();
+                    try {
+                        const updates = action === 'reject' ? { status: 'rejected' } : { status: 'accepted' };
+                        const { error } = await supabase
+                            .from('collab_members')
+                            .update(updates)
+                            .eq('collab_id', collab.id)
+                            .eq('user_id', memberId);
+                        if (error) throw error;
+                        toast.success(action === 'reject' ? 'Request rejected' : 'Request accepted');
+                        window.dispatchEvent(new CustomEvent('collab-changed'));
+                    } catch (err: any) {
+                        toast.error(`Failed to ${action} request`, { description: err.message });
                     } finally {
                         setBusy(false);
                     }
@@ -291,181 +343,255 @@ export const columns: ColumnDef<Post>[] = [
                                     <DialogTitle className="break-words">{collab.title || 'Collab Details'}</DialogTitle>
                                 </DialogHeader>
 
-                                <div className="mt-2 space-y-3 text-sm text-foreground/90">
-                                    <div>
-                                        <strong className="block text-xs text-foreground/70">Description</strong>
-                                        <p className="whitespace-pre-wrap">{collab.description || '—'}</p>
+                                <Tabs defaultValue="overview" className="mt-3">
+                                    <div className="flex items-center justify-between">
+                                        <TabsList className="grid grid-cols-2 w-56">
+                                            <TabsTrigger value="overview">Overview</TabsTrigger>
+                                            <TabsTrigger value="members">Members</TabsTrigger>
+                                        </TabsList>
                                     </div>
 
-                                    <div>
-                                        <strong className="block text-xs text-foreground/70">Tags</strong>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            {Array.isArray(collab.tags) && (collab.tags as any[]).length > 0 ? (
-                                                (collab.tags as any[]).map((t: any, i: number) => (
-                                                    <Badge key={i} variant="outline" className="text-xs">{t?.label ?? String(t)}</Badge>
-                                                ))
-                                            ) : (
-                                                <span className="text-sm text-foreground/70">—</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <strong className="block text-xs text-foreground/70">Members</strong>
-                                        <div className="mt-1 text-sm">{collab.member_count ?? (Array.isArray(collab.members) ? collab.members.length : '—')}</div>
-                                    </div>
-
-                                    {collab.members?.some((m: any) => m.status === 'accepted') && (
-                                        <div>
-                                            <strong className="block text-xs text-foreground/70 mb-2">Team</strong>
-                                            <div className="space-y-3">
-                                                {collab.members
-                                                    .filter((m: any) => m.status === 'accepted')
-                                                    .map((member: any) => {
-                                                        const profile = memberProfiles[member.user_id];
-                                                        return (
-                                                            <div key={member.user_id} className="flex items-center justify-between rounded-lg border p-3">
-                                                                <div className="flex items-center gap-3">
-                                                                    <img
-                                                                        src={profile?.profile_photo || "https://github.com/shadcn.png"}
-                                                                        alt="profile"
-                                                                        className="h-8 w-8 rounded-full object-cover"
-                                                                    />
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">{profile?.name || member.user_id}</span>
-                                                                        {profile?.school && (
-                                                                            <span className="text-xs text-foreground/60">{profile.school}</span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <Button asChild variant="outline" size="sm">
-                                                                    <Link href={`/requests/posts/${member.user_id}`}>
-                                                                        View profile
-                                                                    </Link>
-                                                                </Button>
-                                                            </div>
-                                                        );
-                                                    })}
+                                    <TabsContent value="overview">
+                                        <div className="mt-4 space-y-5 text-sm text-foreground/90">
+                                            <div>
+                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Description</strong>
+                                                <p className="mt-1 whitespace-pre-wrap">{collab.description || '—'}</p>
                                             </div>
-                                        </div>
-                                    )}
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <strong className="block text-xs text-foreground/70">Visibility</strong>
-                                            <div className="mt-1"><Badge variant="secondary" className="text-sm">{collab.visibility === 'public' ? 'Public' : 'Private'}</Badge></div>
-                                        </div>
-                                        <div>
-                                            <strong className="block text-xs text-foreground/70">Created</strong>
-                                            <div className="mt-1 text-sm">{collab.created_at ? new Date(collab.created_at as any).toLocaleString() : '—'}</div>
-                                        </div>
-                                    </div>
+                                            <div>
+                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Tags</strong>
+                                                <div className="mt-1 flex flex-wrap gap-2">
+                                                    {Array.isArray(collab.tags) && (collab.tags as any[]).length > 0 ? (
+                                                        (collab.tags as any[]).map((t: any, i: number) => (
+                                                            <Badge key={i} variant="outline" className="text-xs">{t?.label ?? String(t)}</Badge>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-sm text-foreground/60">—</span>
+                                                    )}
+                                                </div>
+                                            </div>
 
-                                    <div>
-                                        <strong className="block text-xs text-foreground/70">Creator</strong>
-                                        <div className="mt-1 text-sm">
-                                            {creatorLoading ? (
-                                                'Loading...'
-                                            ) : creatorProfile ? (
-                                                <div className="flex items-center gap-3">
-                                                    {creatorProfile.avatar_url ? (
-                                                        // show image if available
-                                                        <img src={creatorProfile.avatar_url} alt={creatorProfile.name || 'avatar'} className="h-8 w-8 rounded-full object-cover" />
-                                                    ) : null}
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium">{creatorProfile.name ?? creatorProfile.id}</span>
-                                                        {creatorProfile.school ? <span className="text-xs text-foreground/70">{creatorProfile.school}</span> : null}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Visibility</strong>
+                                                    <div className="mt-1"><Badge variant="secondary" className="text-sm">{collab.visibility === 'public' ? 'Public' : 'Private'}</Badge></div>
+                                                </div>
+                                                <div>
+                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Created</strong>
+                                                    <div className="mt-1 text-sm">{collab.created_at ? new Date(collab.created_at as any).toLocaleString() : '—'}</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Current members</strong>
+                                                    <p className="mt-1 text-lg font-semibold">{acceptedMembers.length}</p>
+                                                </div>
+                                                <div>
+                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Pending requests</strong>
+                                                    <p className="mt-1 text-lg font-semibold">{pendingMembers.length}</p>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Creator</strong>
+                                                <div className="mt-2 text-sm">
+                                                    {creatorLoading ? (
+                                                        'Loading...'
+                                                    ) : creatorProfile ? (
+                                                        <div className="flex items-center gap-3">
+                                                            {creatorProfile.avatar_url ? (
+                                                                <img src={creatorProfile.avatar_url} alt={creatorProfile.name || 'avatar'} className="h-8 w-8 rounded-full object-cover" />
+                                                            ) : null}
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium">{creatorProfile.name ?? creatorProfile.id}</span>
+                                                                {creatorProfile.school ? <span className="text-xs text-foreground/70">{creatorProfile.school}</span> : null}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        collab.creator_id
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {user?.id === collab.creator_id ? (
+                                                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                                                    <strong className="block text-xs uppercase tracking-wide text-destructive">Danger zone</strong>
+                                                    <p className="mt-2 text-sm text-foreground/80">Change who can see this collab or remove it permanently.</p>
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            className="border-destructive text-destructive hover:bg-destructive/10"
+                                                            disabled={busy}
+                                                            onClick={() => {
+                                                                setConfirmType('toggle');
+                                                                setConfirmOpen(true);
+                                                            }}
+                                                        >
+                                                            {busy && confirmType === 'toggle' ? 'Working...' : `Make ${collab.visibility === 'public' ? 'Private' : 'Public'}`}
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            disabled={busy}
+                                                            onClick={() => {
+                                                                setConfirmType('delete');
+                                                                setConfirmOpen(true);
+                                                            }}
+                                                        >
+                                                            {busy && confirmType === 'delete' ? 'Working...' : 'Delete Collab'}
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                collab.creator_id
-                                            )}
+                                            ) : user ? (
+                                                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                                                    <strong className="block text-xs uppercase tracking-wide text-destructive">Danger zone</strong>
+                                                    <p className="mt-2 text-sm text-foreground/80">Leave this collab if you no longer want to participate.</p>
+                                                    <div className="mt-3">
+                                                        <Button
+                                                            variant="destructive"
+                                                            disabled={busy}
+                                                            onClick={leaveCollab}
+                                                        >
+                                                            {busy ? 'Working...' : 'Leave Collab'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : null}
                                         </div>
-                                    </div>
-                                    
-                                    {collab.members?.some((m: any) => m.status === 'pending') && (
-                                        <div>
-                                            <strong className="block text-xs text-foreground/70 mb-2">Pending Requests</strong>
-                                            <div className="space-y-3">
-                                                {collab.members
-                                                    .filter((m: any) => m.status === 'pending')
-                                                    .map((member: any) => {
-                                                        const profile = pendingProfiles[member.user_id];
-                                                        const handleAction = async (action: 'accept' | 'reject') => {
-                                                            setBusy(true);
-                                                            const supabase = createClient();
-                                                            try {
-                                                                if (action === 'reject') {
-                                                                    const { error } = await supabase
-                                                                        .from('collab_members')
-                                                                        .update({ status: 'rejected' })
-                                                                        .eq('user_id', member.user_id);
-                                                                    if (error) throw error;
-                                                                    toast.success('Request rejected');
-                                                                } else {
-                                                                    const { error } = await supabase
-                                                                        .from('collab_members')
-                                                                        .update({ status: 'accepted' })
-                                                                        .eq('user_id', member.user_id);
-                                                                    if (error) throw error;
-                                                                    console.log("error:", error)
-                                                                    toast.success('Request accepted');
-                                                                }
-                                                                window.dispatchEvent(new CustomEvent('collab-changed'));
-                                                                //window.location.reload();
-                                                            } catch (err: any) {
-                                                                toast.error(`Failed to ${action} request`, {
-                                                                    description: err.message
-                                                                });
-                                                            } finally {
-                                                                setBusy(false);
-                                                            }
-                                                        };
-                                                        return (
-                                                            <div key={member.id} className="flex items-center justify-between p-3.5 rounded-lg border">
-                                                                <div className="flex items-center gap-3">
-                                                                    <img 
-                                                                        src={profile?.profile_photo || "https://github.com/shadcn.png"} 
-                                                                        alt="profile" 
-                                                                        className="h-8 w-8 rounded-full object-cover"
-                                                                    />
-                                                                    <div className="flex flex-col">
-                                                                        <span className="font-medium">{profile?.name || 'Unknown User'}</span>
-                                                                        <span className="text-xs text-foreground/70">{profile?.school || ''}</span>
-                                                                        {member.message && (
-                                                                            <p className="text-xs text-foreground/70 mt-1 italic">"{member.message}"</p>
-                                                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="members">
+                                        <div className="mt-4 space-y-6">
+                                            <div>
+                                                <div className="flex items-center justify-between">
+                                                    <strong className="text-xs uppercase tracking-wide text-foreground/60">Requests</strong>
+                                                    <Badge variant="outline" className="text-xs">{pendingMembers.length}</Badge>
+                                                </div>
+                                                <div className="mt-3 space-y-3">
+                                                    {pendingMembers.length === 0 ? (
+                                                        <p className="text-sm text-foreground/60">No pending requests.</p>
+                                                    ) : (
+                                                        pendingMembers.map((member: any) => {
+                                                            const profile = pendingProfiles[member.user_id];
+                                                            const roleLabel = member.user_id === collab.creator_id ? 'Owner' : 'Member';
+                                                            return (
+                                                                <div key={member.id ?? member.user_id} className="flex items-center justify-between rounded-lg border p-3.5">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <img
+                                                                            src={profile?.profile_photo || "https://github.com/shadcn.png"}
+                                                                            alt="profile"
+                                                                            className="h-9 w-9 rounded-full object-cover"
+                                                                        />
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">{profile?.name || 'Unknown User'}</span>
+                                                                            <span className="text-xs text-foreground/70">{roleLabel}</span>
+                                                                            {member.message && (
+                                                                                <p className="mt-1 text-xs italic text-foreground/70">"{member.message}"</p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="cursor-pointer"
+                                                                            size="sm"
+                                                                            disabled={busy}
+                                                                            onClick={() => handleRequestStatus(member.user_id, 'reject')}
+                                                                        >
+                                                                            <X className="text-destructive" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="cursor-pointer"
+                                                                            size="sm"
+                                                                            disabled={busy}
+                                                                            onClick={() => handleRequestStatus(member.user_id, 'accept')}
+                                                                        >
+                                                                            <Check className="text-emerald-400" />
+                                                                        </Button>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex gap-2">
-                                                                    <Button 
-                                                                        variant="outline"
-                                                                        className={`cursor-pointer`}
-                                                                        size="sm"
-                                                                        disabled={busy}
-                                                                        onClick={() => handleAction('reject')}
-                                                                    >
-                                                                        <X className={`text-destructive`} />
-                                                                    </Button>
-                                                                    <Button 
-                                                                        variant="outline"
-                                                                        className={`cursor-pointer`}
-                                                                        size="sm"
-                                                                        disabled={busy}
-                                                                        onClick={() => handleAction('accept')}
-                                                                    >
-                                                                        <Check className={`text-emerald-400`} />
-                                                                    </Button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex items-center justify-between">
+                                                    <strong className="text-xs uppercase tracking-wide text-foreground/60">Current members</strong>
+                                                    <Badge variant="outline" className="text-xs">{acceptedMembers.length}</Badge>
+                                                </div>
+                                                <div className="mt-3 space-y-3">
+                                                    {acceptedMembers.length === 0 ? (
+                                                        <p className="text-sm text-foreground/60">No accepted members yet.</p>
+                                                    ) : (
+                                                        acceptedMembers.map((member: any) => {
+                                                            const profile = memberProfiles[member.user_id];
+                                                            const roleLabel = member.user_id === collab.creator_id ? 'Owner' : 'Member';
+                                                            const isOwner = roleLabel === 'Owner';
+                                                            return (
+                                                                <div key={member.user_id} className="flex items-center justify-between rounded-lg border p-3">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <img
+                                                                            src={profile?.profile_photo || "https://github.com/shadcn.png"}
+                                                                            alt="profile"
+                                                                            className="h-9 w-9 rounded-full object-cover"
+                                                                        />
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium">{profile?.name || member.user_id}</span>
+                                                                            <span className="text-xs text-foreground/70">{roleLabel}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 p-0"
+                                                                                disabled={busy}
+                                                                            >
+                                                                                <span className="sr-only">Open member menu</span>
+                                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent align="end">
+                                                                            <DropdownMenuItem asChild>
+                                                                                <Link href={`/requests/posts/${member.user_id}`} className="flex w-full items-center gap-2">
+                                                                                    <Eye className="h-4 w-4" />
+                                                                                    <span>View profile</span>
+                                                                                </Link>
+                                                                            </DropdownMenuItem>
+                                                                            {user?.id === collab.creator_id && !isOwner ? (
+                                                                                <>
+                                                                                    <DropdownMenuSeparator />
+                                                                                    <DropdownMenuItem
+                                                                                        className="text-destructive focus:text-destructive"
+                                                                                        disabled={busy}
+                                                                                        onSelect={(event) => {
+                                                                                            event.preventDefault();
+                                                                                            if (busy) return;
+                                                                                            removeMember(member.user_id);
+                                                                                        }}
+                                                                                    >
+                                                                                        <UserMinus className="h-4 w-4" />
+                                                                                        <span>Remove from collab</span>
+                                                                                    </DropdownMenuItem>
+                                                                                </>
+                                                                            ) : null}
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
+                                    </TabsContent>
+                                </Tabs>
 
-                                <DialogFooter>
+                                <DialogFooter className="mt-4">
                                     <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
                                 </DialogFooter>
                             </DialogContent>
