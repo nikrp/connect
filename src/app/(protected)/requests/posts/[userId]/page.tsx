@@ -50,7 +50,6 @@ export default function Profile() {
     const [profile, setProfile] = useState<Profile>({} as Profile);
     const [collabs, setCollabs] = useState<Request[]>([]);
     const [collabsLoading, setCollabsLoading] = useState(true);
-    const [isCollabMember, setIsCollabMember] = useState(false);
     const supabase = createClient();
     const params = useParams() as { userId?: string };
     const targetUserId = params?.userId as string;
@@ -98,48 +97,6 @@ export default function Profile() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetUserId]);
 
-    // Check if current user is a member of any of the target user's collabs
-    useEffect(() => {
-        async function checkMembership() {
-            if (!user?.id || !targetUserId || user.id === targetUserId) {
-                setIsCollabMember(false);
-                return;
-            }
-            try {
-                // Get all collab IDs for the target user
-                const { data: targetCollabs, error: collabError } = await supabase
-                    .from('collab_requests')
-                    .select('id')
-                    .eq('creator_id', targetUserId);
-                
-                if (collabError || !targetCollabs || targetCollabs.length === 0) {
-                    setIsCollabMember(false);
-                    return;
-                }
-
-                const collabIds = targetCollabs.map(c => c.id);
-
-                // Check if current user is a member of any of these collabs
-                const { data: membership, error: memberError } = await supabase
-                    .from('collab_members')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .in('collab_id', collabIds)
-                    .limit(1);
-
-                if (!memberError && membership && membership.length > 0) {
-                    setIsCollabMember(true);
-                } else {
-                    setIsCollabMember(false);
-                }
-            } catch (err) {
-                console.error('Error checking membership:', err);
-                setIsCollabMember(false);
-            }
-        }
-        checkMembership();
-    }, [user?.id, targetUserId]);
-
     // Messaging disabled; using shared RequestCard actions only on public page
 
     // No editing on public profile page
@@ -167,8 +124,8 @@ export default function Profile() {
                 </div>
                 <p className={`mb-5`}>{profile.bio}</p>
                 
-                {/* Contact Information - only shown if current user is a collab member */}
-                {isCollabMember && profile.contact && (
+                {/* Contact Information */}
+                {profile.contact && (
                     <div className="mb-5">
                         <p className="font-semibold mb-2">Contact Information</p>
                         <div className="flex flex-col gap-2">
