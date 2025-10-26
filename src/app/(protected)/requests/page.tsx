@@ -314,6 +314,7 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string>("");
     const [hasRequested, setHasRequested] = useState<boolean>(false);
+    const [membershipStatus, setMembershipStatus] = useState<'pending' | 'accepted' | null>(null);
     const supabase = createClient();
 
     // Check if the current user already has a join request/member row for this collab
@@ -335,7 +336,15 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
                 }
 
                 if (!mounted) return;
-                setHasRequested(Array.isArray(data) && data.length > 0);
+                if (Array.isArray(data) && data.length > 0) {
+                    const status = (data[0] as { status?: string }).status;
+                    const normalized = status === 'accepted' ? 'accepted' : 'pending';
+                    setMembershipStatus(normalized);
+                    setHasRequested(true);
+                } else {
+                    setMembershipStatus(null);
+                    setHasRequested(false);
+                }
             } catch (err) {
                 console.debug('Unexpected error checking existing collab_members', err);
             }
@@ -383,6 +392,7 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
 
             toast.success('Request to join sent');
             setHasRequested(true);
+            setMembershipStatus('pending');
             window.dispatchEvent(new CustomEvent('collab-join-request', { detail: { collabId: request.id, userId: user.id } }));
             setJoinOpen(false);
             setMessage('');
@@ -393,6 +403,14 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
             setBusy(false);
         }
     }
+
+    const requestButtonLabel = membershipStatus === 'accepted'
+        ? 'Joined'
+        : hasRequested || membershipStatus === 'pending'
+            ? 'Requested'
+            : 'Request to Join';
+    const requestButtonVariant = membershipStatus === 'accepted' ? 'outline' : hasRequested ? 'outline' : 'secondary';
+    const requestButtonDisabled = busy || hasRequested;
 
     return (
         <div className={`border rounded-lg p-3.5`}>
@@ -483,8 +501,12 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
                 <div className="flex flex-col gap-2">
                     <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
                         <DialogTrigger asChild>
-                            <Button variant={hasRequested ? `outline` : `secondary`} className={`cursor-pointer w-full`} disabled={busy || hasRequested}>
-                                {hasRequested ? 'Requested' : 'Request to Join'}
+                            <Button
+                                variant={requestButtonVariant}
+                                className={`cursor-pointer w-full`}
+                                disabled={requestButtonDisabled}
+                            >
+                                {requestButtonLabel}
                             </Button>
                         </DialogTrigger>
                         <DialogContent>

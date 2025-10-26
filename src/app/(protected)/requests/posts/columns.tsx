@@ -347,7 +347,17 @@ export const columns: ColumnDef<Post>[] = [
                                     <div className="flex items-center justify-between">
                                         <TabsList className="grid grid-cols-2 w-56">
                                             <TabsTrigger value="overview">Overview</TabsTrigger>
-                                            <TabsTrigger value="members">Members</TabsTrigger>
+                                            <TabsTrigger value="members">
+                                                <span className="flex items-center gap-2">
+                                                    Members
+                                                    {pendingMembers.length > 0 ? (
+                                                        <span className="relative flex h-2.5 w-2.5">
+                                                            <span className="absolute inline-flex h-full w-full rounded-full bg-foreground opacity-75 animate-ping" />
+                                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-foreground" />
+                                                        </span>
+                                                    ) : null}
+                                                </span>
+                                            </TabsTrigger>
                                         </TabsList>
                                     </div>
 
@@ -566,8 +576,9 @@ export const columns: ColumnDef<Post>[] = [
                                                                                 <>
                                                                                     <DropdownMenuSeparator />
                                                                                     <DropdownMenuItem
-                                                                                        className="text-destructive focus:text-destructive"
+                                                                                        className=""
                                                                                         disabled={busy}
+                                                                                        variant={`destructive`}
                                                                                         onSelect={(event) => {
                                                                                             event.preventDefault();
                                                                                             if (busy) return;

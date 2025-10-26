@@ -96,15 +96,9 @@ export default function Navbar() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         <DropdownMenuGroup>
-                            <DropdownMenuLabel className={`text-sm text-foreground/60`}>My Account</DropdownMenuLabel>
-                            <DropdownMenuItem asChild className={`cursor-pointer`}>
-                                <Link href="/profile">Profile</Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild className={`cursor-pointer`}>
-                                <Link href="/settings">Settings</Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className={`text-sm text-foreground/60`}>Account</DropdownMenuLabel>
                             <DropdownMenuItem className={`cursor-pointer`}>Support</DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem asChild variant={`destructive`} className={`flex items-center gap-2 cursor-pointer w-full`}>
                                 <button onClick={() => supabase.auth.signOut().then(() => {router.push("/")}).catch(error => {console.error("Error signing out:", error)})}>
                                     <LogOutIcon /> Log out

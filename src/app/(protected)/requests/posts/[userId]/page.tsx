@@ -103,7 +103,7 @@ export default function Profile() {
 
     return (
         <div className={`bg-card rounded-xl w-11/12 md:w-9/12 mx-auto mb-5`}>
-            <div className={`p-10 md:p-10 bg-muted text-muted-foreground rounded-t-xl`}>
+            <div className={`p-10 md:p-10 rounded-t-xl bg-[#f5efe1] text-foreground/90 dark:bg-[#292522] dark:text-foreground`}>
                 <div className={`flex flex-col md:flex-row md:justify-between`}>
                     <div className={`flex flex-row items-start gap-4 mb-5`}>
                         <Avatar className={`size-20 md:size-40 bg-sidebar p-2 rounded-full`}>
@@ -136,7 +136,7 @@ export default function Profile() {
                                         <a 
                                             key={index}
                                             href={`mailto:${email}`}
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-input hover:bg-input/80 transition-colors text-sm"
+                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e0d7c4] text-foreground/90 transition-colors text-sm hover:bg-[#d6ccb7] dark:bg-input dark:text-foreground dark:hover:bg-input/80"
                                         >
                                             <Mail className="w-3.5 h-3.5" />
                                             {email}
@@ -152,7 +152,7 @@ export default function Profile() {
                                         <a 
                                             key={index}
                                             href={`tel:${phone}`}
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-input hover:bg-input/80 transition-colors text-sm"
+                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e0d7c4] text-foreground/90 transition-colors text-sm hover:bg-[#d6ccb7] dark:bg-input dark:text-foreground dark:hover:bg-input/80"
                                         >
                                             <Phone className="w-3.5 h-3.5" />
                                             {phone}
@@ -169,7 +169,7 @@ export default function Profile() {
                                             href={profile.contact.socials.twitter}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-input hover:bg-input/80 transition-colors text-sm"
+                                            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e0d7c4] text-foreground/90 transition-colors text-sm hover:bg-[#d6ccb7] dark:bg-input dark:text-foreground dark:hover:bg-input/80"
                                         >
                                             <Twitter className="w-3.5 h-3.5" />
                                             Twitter
@@ -198,7 +198,7 @@ export default function Profile() {
                 <div className={`flex items-center gap-1.5 flex-wrap`}>
                     {(Array.isArray(profile.skills) ? profile.skills : []).map((skill: { slug: string, label: string, custom: boolean }, index: number) => {
                         return (
-                            <p className={`px-3 py-1 rounded-full bg-input`} key={index}>{skill.label}</p>
+                            <p className={`px-3 py-1 rounded-full bg-[#e0d7c4] text-foreground/90 dark:bg-input dark:text-foreground`} key={index}>{skill.label}</p>
                         )
                     })}
                 </div>
@@ -206,12 +206,12 @@ export default function Profile() {
                 <div className={`flex items-center gap-1.5 flex-wrap`}>
                     {(Array.isArray(profile.interests) ? profile.interests : []).map((skill: { slug: string, label: string, custom: boolean }, index: number) => {
                         return (
-                            <p className={`px-3 py-1 rounded-full bg-input`} key={index}>{skill.label}</p>
+                            <p className={`px-3 py-1 rounded-full bg-[#e0d7c4] text-foreground/90 dark:bg-input dark:text-foreground`} key={index}>{skill.label}</p>
                         )
                     })}
                 </div>
             </div>
-            <div className={`p-10 md:p-10 bg-card text-card-foreground rounded-b-xl`}>
+            <div className={`p-10 md:p-10 rounded-b-xl bg-[#ebe4d3] text-foreground dark:bg-card dark:text-card-foreground`}>
                 <div className="flex items-center justify-between mb-6">
                     <p className={`text-4xl font-semibold`}>Collabs ({collabs.length})</p>
                 </div>
@@ -238,6 +238,7 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string>("");
     const [hasRequested, setHasRequested] = useState<boolean>(false);
+    const [membershipStatus, setMembershipStatus] = useState<'pending' | 'accepted' | null>(null);
     const supabase = createClient();
 
     // Disable join if viewer is the creator
@@ -255,7 +256,15 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
                     .eq('user_id', user.id)
                     .limit(1);
                 if (!mounted) return;
-                if (!error) setHasRequested(Array.isArray(data) && data.length > 0);
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    const status = (data[0] as { status?: string }).status;
+                    const normalized = status === 'accepted' ? 'accepted' : 'pending';
+                    setMembershipStatus(normalized);
+                    setHasRequested(true);
+                } else {
+                    setMembershipStatus(null);
+                    setHasRequested(false);
+                }
             } catch {}
         };
         checkExisting();
@@ -297,6 +306,7 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
             }
             toast.success('Request to join sent');
             setHasRequested(true);
+            setMembershipStatus('pending');
             window.dispatchEvent(new CustomEvent('collab-join-request', { detail: { collabId: request.id, userId: user.id } }));
             setJoinOpen(false);
             setMessage('');
@@ -307,6 +317,14 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
             setBusy(false);
         }
     };
+
+    const requestButtonLabel = membershipStatus === 'accepted'
+        ? 'Joined'
+        : hasRequested || membershipStatus === 'pending'
+            ? 'Requested'
+            : 'Request to Join';
+    const requestButtonVariant = membershipStatus === 'accepted' ? 'outline' : hasRequested ? 'outline' : 'secondary';
+    const requestButtonDisabled = busy || hasRequested;
 
     return (
         <div className={`border rounded-lg p-3.5 bg-background`}>
@@ -395,8 +413,12 @@ function RequestCard({ request, refresh, user }: { request: Request; refresh: ()
                     <div className="flex flex-col gap-2">
                         <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
                             <DialogTrigger asChild>
-                                <Button variant={hasRequested ? `outline` : `secondary`} className={`cursor-pointer w-full`} disabled={busy || hasRequested}>
-                                    {hasRequested ? 'Requested' : 'Request to Join'}
+                                <Button
+                                    variant={requestButtonVariant}
+                                    className={`cursor-pointer w-full`}
+                                    disabled={requestButtonDisabled}
+                                >
+                                    {requestButtonLabel}
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>

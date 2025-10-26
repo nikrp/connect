@@ -464,7 +464,7 @@ export default function Profile() {
 
     return (
         <div className={`bg-card rounded-xl w-11/12 md:w-9/12 mx-auto mb-5`}>
-            <div className={`p-10 md:p-10 bg-muted text-muted-foreground rounded-t-xl`}>
+            <div className={`p-10 md:p-10 bg-muted text-card-foreground rounded-t-xl`}>
                 <div className={`flex flex-col md:flex-row md:justify-between`}>
                     <div className={`flex flex-row items-start gap-4 mb-5`}>
                         <Dialog open={photoEditorOpen} onOpenChange={handlePhotoDialogChange}>
@@ -888,7 +888,7 @@ export default function Profile() {
                     })}
                 </div>
             </div>
-            <div className={`p-10 md:p-10 bg-card text-card-foreground rounded-b-xl`}>
+            <div className={`p-10 md:p-10 bg-input text-input-foreground dark:bg-card dark:text-card-foreground rounded-b-xl`}>
                 <div className="flex items-center justify-between mb-6">
                     <p className={`text-4xl font-semibold`}>Collabs ({collabs.length})</p>
                     <Link href="/requests/posts">
@@ -948,7 +948,7 @@ export default function Profile() {
                                             )
                                         })}
                                     </div>
-                                    <div className={`grid grid-cols-2 gap-3.5`}>
+                                    <div className={`grid grid-cols-1 gap-3.5`}>
                                         <Dialog>
                                             <DialogTrigger asChild>
                                                 <Button variant={`default`} className={`cursor-pointer w-full`}>View</Button>
@@ -985,23 +985,8 @@ export default function Profile() {
                                                         )
                                                     })}
                                                 </div>
-                                                <Button
-                                                    variant={`secondary`}
-                                                    className={`cursor-pointer w-full`}
-                                                    size={`lg`}
-                                                    onClick={() => handleMessage(request.creator_id)}
-                                                >
-                                                    Message
-                                                </Button>
                                             </DialogContent>
                                         </Dialog>
-                                        <Button
-                                            variant={`secondary`}
-                                            className={`cursor-pointer w-full`}
-                                            onClick={() => handleMessage(request.creator_id)}
-                                        >
-                                            Message
-                                        </Button>
                                     </div>
                                 </div>
                             )
