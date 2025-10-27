@@ -1,617 +1,1105 @@
-"use client"
+"use client";
 
 import { ColumnDef } from "@tanstack/react-table";
 import MembersCell from "./member-cell";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Eye, EyeClosed, Info, LogOut, MoreHorizontal, Trash, UserMinus, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Eye,
+  EyeClosed,
+  Info,
+  LogOut,
+  MoreHorizontal,
+  Trash,
+  UserMinus,
+  X,
+} from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "../../../../types/profile";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export type Post = {
-    id: string
-    creator_id: string
-    title: string
-    description: string
-    tags: object[]
-    member_goal: number
-    created_at: Date
-    updated_at: Date
-    member_count: number
-    visibility: "public" | "private",
-    members: string[]
-}
+  id: string;
+  creator_id: string;
+  title: string;
+  description: string;
+  tags: object[];
+  member_goal: number;
+  created_at: Date;
+  updated_at: Date;
+  member_count: number;
+  visibility: "public" | "private";
+  members: string[];
+};
 
 export const columns: ColumnDef<Post>[] = [
-    {
-        accessorKey: "title",
-        header: "Title",
-        cell: info => <p className={`font-semibold`}>{info.getValue() as string}</p>
-    },
-    {
-        accessorKey: "visibility",
-        header: "Visibility",
-        cell: info => (
-            <Badge variant={`secondary`} className={`text-sm`}>{info.getValue() === "public" ? "Public" : "Private"}</Badge>
-        )
-    },
-    {
-        accessorKey: "members",
-        header: "Members",
-        cell: info => <MembersCell userIds={(info.getValue() as object[]).filter((m: any) => m.status === 'accepted').map((n: any) => n.user_id)} />
-    },
-    {
-        accessorKey: "tags",
-        header: "Tags",
-        cell: info => (
-            <Badge variant={`outline`} className={`text-sm flex items-center gap-2`}>
-                <span>{((info.getValue() as any[])[0] as { label: string })?.label}</span>
-                {(info.getValue() as object[]).length > 1 && ` +${(info.getValue() as object[]).length - 1}`}
-            </Badge>
-        )
-    },
-    {
-        accessorKey: "created_at",
-        header: "Created",
-        cell: info => (
-            <span>
-                {new Date(info.getValue() as string).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}
-            </span>
-        )
-    },
-    {
-        id: "actions",
-        cell: ({ row }) => {
-            const collab = row.original;
-            const { user, setUser, profile, setProfile } : { user: User | null, setUser: (user: User | null) => void, profile: Profile | null, setProfile: (profile: Profile | null) => void } = useUser();
+  {
+    accessorKey: "title",
+    header: "Title",
+    cell: (info) => (
+      <p className={`font-semibold`}>{info.getValue() as string}</p>
+    ),
+  },
+  {
+    accessorKey: "visibility",
+    header: "Visibility",
+    cell: (info) => (
+      <Badge variant={`secondary`} className={`text-sm`}>
+        {info.getValue() === "public" ? "Public" : "Private"}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: "members",
+    header: "Members",
+    cell: (info) => (
+      <MembersCell
+        userIds={(info.getValue() as object[])
+          .filter((m: any) => m.status === "accepted")
+          .map((n: any) => n.user_id)}
+      />
+    ),
+  },
+  {
+    accessorKey: "tags",
+    header: "Tags",
+    cell: (info) => (
+      <Badge variant={`outline`} className={`text-sm flex items-center gap-2`}>
+        <span>
+          {((info.getValue() as any[])[0] as { label: string })?.label}
+        </span>
+        {(info.getValue() as object[]).length > 1 &&
+          ` +${(info.getValue() as object[]).length - 1}`}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: "created_at",
+    header: "Created",
+    cell: (info) => (
+      <span>
+        {new Date(info.getValue() as string).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </span>
+    ),
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const collab = row.original;
+      const {
+        user,
+        setUser,
+        profile,
+        setProfile,
+      }: {
+        user: User | null;
+        setUser: (user: User | null) => void;
+        profile: Profile | null;
+        setProfile: (profile: Profile | null) => void;
+      } = useUser();
 
-            function ActionMenu() {
-                // Efficient pending member profile fetching
-                const [detailsOpen, setDetailsOpen] = useState(false);
-                const [pendingProfiles, setPendingProfiles] = useState<Record<string, any>>({});
-                const [memberProfiles, setMemberProfiles] = useState<Record<string, any>>({});
-                const acceptedMembers = useMemo(() => Array.isArray(collab.members) ? collab.members.filter((m: any) => m.status === 'accepted') : [], [collab.members]);
-                const pendingMembers = useMemo(() => Array.isArray(collab.members) ? collab.members.filter((m: any) => m.status === 'pending') : [], [collab.members]);
-                useEffect(() => {
-                    if (!detailsOpen || pendingMembers.length === 0) return;
-                    const idsToFetch = pendingMembers.filter((m: any) => !pendingProfiles[m.user_id]).map((m: any) => m.user_id);
-                    if (idsToFetch.length === 0) return;
-                    let mounted = true;
-                    const supabase = createClient();
-                    supabase
-                        .from('profiles')
-                        .select('id, name, profile_photo, school')
-                        .in('id', idsToFetch)
-                        .then(({ data }) => {
-                            if (!mounted || !data) return;
-                            setPendingProfiles(prev => {
-                                const next = { ...prev };
-                                for (const profile of data) {
-                                    next[profile.id] = profile;
-                                }
-                                return next;
-                            });
-                        });
-                    return () => { mounted = false };
-                }, [detailsOpen, pendingMembers, pendingProfiles]);
-                useEffect(() => {
-                    if (!detailsOpen || acceptedMembers.length === 0) return;
-                    const idsToFetch = acceptedMembers.filter((m: any) => !memberProfiles[m.user_id]).map((m: any) => m.user_id);
-                    if (idsToFetch.length === 0) return;
-                    let mounted = true;
-                    const supabase = createClient();
-                    supabase
-                        .from('profiles')
-                        .select('id, name, profile_photo, school')
-                        .in('id', idsToFetch)
-                        .then(({ data }) => {
-                            if (!mounted || !data) return;
-                            setMemberProfiles(prev => {
-                                const next = { ...prev };
-                                for (const profile of data) {
-                                    next[profile.id] = profile;
-                                }
-                                return next;
-                            });
-                        });
-                    return () => { mounted = false };
-                }, [detailsOpen, acceptedMembers, memberProfiles]);
-                const [busy, setBusy] = useState(false);
-                const [confirmOpen, setConfirmOpen] = useState(false);
-                const [confirmType, setConfirmType] = useState<'delete'|'toggle'|null>(null);
-                const [creatorProfile, setCreatorProfile] = useState<any | null>(null);
-                const [creatorLoading, setCreatorLoading] = useState(false);
-
-                // Leave collab (for non-creators)
-                const leaveCollab = async () => {
-                    if (!user) {
-                        toast.error('You must be logged in to leave a collab');
-                        return;
-                    }
-                    setBusy(true);
-                    const supabase = createClient();
-                    try {
-                        const { error } = await supabase
-                            .from('collab_members')
-                            .delete()
-                            .eq('collab_id', collab.id)
-                            .eq('user_id', user.id);
-                        if (error) throw error;
-                        toast.success('You left the collab');
-                        // notify listeners to refresh
-                        window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'left' } }));
-                    } catch (err: any) {
-                        toast.error('Failed to leave collab', { description: err.message });
-                    } finally {
-                        setBusy(false);
-                    }
+      function ActionMenu() {
+        // Efficient pending member profile fetching
+        const [detailsOpen, setDetailsOpen] = useState(false);
+        const [pendingProfiles, setPendingProfiles] = useState<
+          Record<string, any>
+        >({});
+        const [memberProfiles, setMemberProfiles] = useState<
+          Record<string, any>
+        >({});
+        const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+        const [rejectMessage, setRejectMessage] = useState("");
+        const [rejectingMemberId, setRejectingMemberId] = useState<
+          string | null
+        >(null);
+        const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+        const [removeMessage, setRemoveMessage] = useState("");
+        const [removingMemberId, setRemovingMemberId] = useState<string | null>(
+          null,
+        );
+        const acceptedMembers = useMemo(
+          () =>
+            Array.isArray(collab.members)
+              ? collab.members.filter((m: any) => m.status === "accepted")
+              : [],
+          [collab.members],
+        );
+        const pendingMembers = useMemo(
+          () =>
+            Array.isArray(collab.members)
+              ? collab.members.filter((m: any) => m.status === "pending")
+              : [],
+          [collab.members],
+        );
+        useEffect(() => {
+          if (!detailsOpen || pendingMembers.length === 0) return;
+          const idsToFetch = pendingMembers
+            .filter((m: any) => !pendingProfiles[m.user_id])
+            .map((m: any) => m.user_id);
+          if (idsToFetch.length === 0) return;
+          let mounted = true;
+          const supabase = createClient();
+          supabase
+            .from("profiles")
+            .select("id, name, profile_photo, school")
+            .in("id", idsToFetch)
+            .then(({ data }) => {
+              if (!mounted || !data) return;
+              setPendingProfiles((prev) => {
+                const next = { ...prev };
+                for (const profile of data) {
+                  next[profile.id] = profile;
                 }
-
-                const removeMember = async (memberId: string) => {
-                    if (!user) {
-                        toast.error('You must be logged in to manage members');
-                        return;
-                    }
-                    if (user.id !== collab.creator_id) {
-                        toast.error('Only the owner can remove members');
-                        return;
-                    }
-                    if (memberId === collab.creator_id) {
-                        toast.error('The owner cannot be removed');
-                        return;
-                    }
-                    setBusy(true);
-                    const supabase = createClient();
-                    try {
-                        const { error } = await supabase
-                            .from('collab_members')
-                            .delete()
-                            .eq('collab_id', collab.id)
-                            .eq('user_id', memberId);
-                        if (error) throw error;
-                        toast.success('Member removed');
-                        window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'member-removed', userId: memberId } }));
-                    } catch (err: any) {
-                        toast.error('Failed to remove member', { description: err.message });
-                    } finally {
-                        setBusy(false);
-                    }
+                return next;
+              });
+            });
+          return () => {
+            mounted = false;
+          };
+        }, [detailsOpen, pendingMembers, pendingProfiles]);
+        useEffect(() => {
+          if (!detailsOpen || acceptedMembers.length === 0) return;
+          const idsToFetch = acceptedMembers
+            .filter((m: any) => !memberProfiles[m.user_id])
+            .map((m: any) => m.user_id);
+          if (idsToFetch.length === 0) return;
+          let mounted = true;
+          const supabase = createClient();
+          supabase
+            .from("profiles")
+            .select("id, name, profile_photo, school")
+            .in("id", idsToFetch)
+            .then(({ data }) => {
+              if (!mounted || !data) return;
+              setMemberProfiles((prev) => {
+                const next = { ...prev };
+                for (const profile of data) {
+                  next[profile.id] = profile;
                 }
+                return next;
+              });
+            });
+          return () => {
+            mounted = false;
+          };
+        }, [detailsOpen, acceptedMembers, memberProfiles]);
+        const [busy, setBusy] = useState(false);
+        const [confirmOpen, setConfirmOpen] = useState(false);
+        const [confirmType, setConfirmType] = useState<
+          "delete" | "toggle" | null
+        >(null);
+        const [creatorProfile, setCreatorProfile] = useState<any | null>(null);
+        const [creatorLoading, setCreatorLoading] = useState(false);
 
-                const handleRequestStatus = async (memberId: string, action: 'accept' | 'reject') => {
-                    setBusy(true);
-                    const supabase = createClient();
-                    try {
-                        const updates = action === 'reject' ? { status: 'rejected' } : { status: 'accepted' };
-                        const { error } = await supabase
-                            .from('collab_members')
-                            .update(updates)
-                            .eq('collab_id', collab.id)
-                            .eq('user_id', memberId);
-                        if (error) throw error;
-                        toast.success(action === 'reject' ? 'Request rejected' : 'Request accepted');
-                        window.dispatchEvent(new CustomEvent('collab-changed'));
-                    } catch (err: any) {
-                        toast.error(`Failed to ${action} request`, { description: err.message });
-                    } finally {
-                        setBusy(false);
-                    }
-                }
+        // Leave collab (for non-creators)
+        const leaveCollab = async () => {
+          if (!user) {
+            toast.error("You must be logged in to leave a collab");
+            return;
+          }
+          setBusy(true);
+          const supabase = createClient();
+          try {
+            const { error } = await supabase
+              .from("collab_members")
+              .delete()
+              .eq("collab_id", collab.id)
+              .eq("user_id", user.id);
+            if (error) throw error;
+            toast.success("You left the collab");
+            // notify listeners to refresh
+            window.dispatchEvent(
+              new CustomEvent("collab-changed", {
+                detail: { id: collab.id, action: "left" },
+              }),
+            );
+          } catch (err: any) {
+            toast.error("Failed to leave collab", { description: err.message });
+          } finally {
+            setBusy(false);
+          }
+        };
 
-                const onConfirm = async () => {
-                    setConfirmOpen(false);
-                    if (confirmType === 'toggle') {
-                        setBusy(true);
-                        const supabase = createClient();
-                        try {
-                            const { error } = await supabase.from('collab_requests').update({ visibility: collab.visibility === 'public' ? 'private' : 'public' }).eq('id', collab.id);
-                            if (error) throw error;
-                            toast.success('Visibility updated');
-                            window.dispatchEvent(new CustomEvent('collab-changed'));
-                        } catch (err: any) {
-                            console.error('Error updating visibility', err);
-                            toast.error('Error updating visibility', { description: (err as any)?.message });
-                        } finally {
-                            setBusy(false);
-                            setConfirmType(null);
-                        }
-                    }
+        const removeMember = async (memberId: string, message?: string) => {
+          if (!user) {
+            toast.error("You must be logged in to manage members");
+            return;
+          }
+          if (user.id !== collab.creator_id) {
+            toast.error("Only the owner can remove members");
+            return;
+          }
+          if (memberId === collab.creator_id) {
+            toast.error("The owner cannot be removed");
+            return;
+          }
+          setBusy(true);
+          const supabase = createClient();
+          try {
+            const { error } = await supabase
+              .from("collab_members")
+              .delete()
+              .eq("collab_id", collab.id)
+              .eq("user_id", memberId);
+            if (error) throw error;
 
-                    if (confirmType === 'delete') {
-                        setBusy(true);
-                        const supabase = createClient();
-                        try {
-                            const { error } = await supabase.from('collab_requests').delete().eq('id', collab.id);
-                            if (error) throw error;
-                            toast.success('Post deleted');
-                            // include id in detail so listeners can remove the row optimistically
-                            window.dispatchEvent(new CustomEvent('collab-changed', { detail: { id: collab.id, action: 'deleted' } }));
-                            // close details dialog if open
-                            setDetailsOpen(false);
-                            // clear any loaded creator profile
-                            setCreatorProfile(null);
-                        } catch (err: any) {
-                            console.error('Error deleting post', err);
-                            toast.error('Error deleting post', { description: (err as any)?.message });
-                        } finally {
-                            setBusy(false);
-                            setConfirmType(null);
-                        }
-                    }
-                }
+            // Send notification to the removed member
+            await supabase.from("notifications").insert({
+              receiver_id: memberId,
+              sender_id: user.id,
+              collab_id: collab.id,
+              type: "member_removed",
+              message: message || null,
+            });
 
-                useEffect(() => {
-                    if (!detailsOpen) return;
-                    let mounted = true;
-                    const fetchProfile = async () => {
-                        setCreatorLoading(true);
-                        const supabase = createClient();
-                        try {
-                            const { data, error } = await supabase.from('profiles').select('id, name, profile_photo, school').eq('id', collab.creator_id).single();
-                            if (error) throw error;
-                            if (mounted) setCreatorProfile(data ?? null);
-                        } catch (err:any) {
-                            console.error('Error fetching creator profile', err);
-                            if (mounted) setCreatorProfile(null);
-                        } finally {
-                            if (mounted) setCreatorLoading(false);
-                        }
-                    }
-                    fetchProfile();
-                    return () => { mounted = false };
-                }, [detailsOpen, collab.creator_id]);
+            toast.success("Member removed");
+            window.dispatchEvent(
+              new CustomEvent("collab-changed", {
+                detail: {
+                  id: collab.id,
+                  action: "member-removed",
+                  userId: memberId,
+                },
+              }),
+            );
+          } catch (err: any) {
+            toast.error("Failed to remove member", {
+              description: err.message,
+            });
+          } finally {
+            setBusy(false);
+          }
+        };
 
-                return (
-                    <>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 relative" disabled={busy}>
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                                {collab.members?.some((m: any) => m.status === 'pending') && (
-                                    <Badge variant={`default`} className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 p-0 flex items-center justify-center text-xs">
-                                        {/* {collab.members.filter((m: any) => m.status === 'pending').length} */}
-                                    </Badge>
-                                )}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel className={`text-foreground/70`}>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem className={`cursor-pointer`} onClick={() => navigator.clipboard.writeText(collab.id)}>
-                                <Copy />
-                                <span>Copy Collab ID</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className={`cursor-pointer flex items-center gap-2`} onClick={() => setDetailsOpen(true)}>
-                                <Info />
-                                <span>View Details</span>
-                                {collab.members?.some((m: any) => m.status === 'pending') && (
-                                    <Badge variant={`default`} className="ml-auto">
-                                        {collab.members.filter((m: any) => m.status === 'pending').length} pending
-                                    </Badge>
-                                )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {collab.creator_id === user?.id ? (
-                                <>
-                                    <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('toggle'); setConfirmOpen(true); }}>
-                                        {collab.visibility === `public` ? <EyeClosed /> : <Eye />}
-                                        <span>{busy ? 'Working...' : `Make ${collab.visibility === `public` ? "Private" : "Public"}`}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={() => { setConfirmType('delete'); setConfirmOpen(true); }}>
-                                        <Trash />
-                                        <span>{busy ? 'Working...' : 'Delete'}</span>
-                                    </DropdownMenuItem>
-                                </>
-                            ) : (
-                                <DropdownMenuItem variant={`destructive`} className={`cursor-pointer`} onClick={leaveCollab}>
-                                    <LogOut />
-                                    <span>{busy ? 'Working...' : 'Leave collab'}</span>
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+        const handleRequestStatus = async (
+          memberId: string,
+          action: "accept" | "reject",
+          message?: string,
+        ) => {
+          if (!user) {
+            toast.error("You must be logged in");
+            return;
+          }
+          setBusy(true);
+          const supabase = createClient();
+          try {
+            const updates =
+              action === "reject"
+                ? { status: "rejected" }
+                : { status: "accepted" };
+            const { error } = await supabase
+              .from("collab_members")
+              .update(updates)
+              .eq("collab_id", collab.id)
+              .eq("user_id", memberId);
+            if (error) throw error;
 
-                    <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{confirmType === 'delete' ? 'Delete Collab' : 'Change Visibility'}</DialogTitle>
-                            </DialogHeader>
-                            <p className={`text-sm text-foreground/80 mt-2`}>{confirmType === 'delete' ? 'This will permanently delete the collab. Are you sure?' : `This will make the collab ${collab.visibility === 'public' ? 'private' : 'public'}. Continue?`}</p>
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-                                <Button onClick={onConfirm} disabled={busy}>{busy ? 'Working...' : confirmType === 'delete' ? 'Delete' : 'Confirm'}</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle className="break-words">{collab.title || 'Collab Details'}</DialogTitle>
-                                </DialogHeader>
+            // Send notification
+            const notificationType =
+              action === "reject" ? "request_rejected" : "request_accepted";
+            await supabase.from("notifications").insert({
+              receiver_id: memberId,
+              sender_id: user.id,
+              collab_id: collab.id,
+              type: notificationType,
+              message: message || null,
+            });
 
-                                <Tabs defaultValue="overview" className="mt-3">
-                                    <div className="flex items-center justify-between">
-                                        <TabsList className="grid grid-cols-2 w-56">
-                                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                                            <TabsTrigger value="members">
-                                                <span className="flex items-center gap-2">
-                                                    Members
-                                                    {pendingMembers.length > 0 ? (
-                                                        <span className="relative flex h-2.5 w-2.5">
-                                                            <span className="absolute inline-flex h-full w-full rounded-full bg-foreground opacity-75 animate-ping" />
-                                                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-foreground" />
-                                                        </span>
-                                                    ) : null}
-                                                </span>
-                                            </TabsTrigger>
-                                        </TabsList>
-                                    </div>
+            toast.success(
+              action === "reject" ? "Request rejected" : "Request accepted",
+            );
+            window.dispatchEvent(new CustomEvent("collab-changed"));
+          } catch (err: any) {
+            toast.error(`Failed to ${action} request`, {
+              description: err.message,
+            });
+          } finally {
+            setBusy(false);
+          }
+        };
 
-                                    <TabsContent value="overview">
-                                        <div className="mt-4 space-y-5 text-sm text-foreground/90">
-                                            <div>
-                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Description</strong>
-                                                <p className="mt-1 whitespace-pre-wrap">{collab.description || '—'}</p>
-                                            </div>
-
-                                            <div>
-                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Tags</strong>
-                                                <div className="mt-1 flex flex-wrap gap-2">
-                                                    {Array.isArray(collab.tags) && (collab.tags as any[]).length > 0 ? (
-                                                        (collab.tags as any[]).map((t: any, i: number) => (
-                                                            <Badge key={i} variant="outline" className="text-xs">{t?.label ?? String(t)}</Badge>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-sm text-foreground/60">—</span>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Visibility</strong>
-                                                    <div className="mt-1"><Badge variant="secondary" className="text-sm">{collab.visibility === 'public' ? 'Public' : 'Private'}</Badge></div>
-                                                </div>
-                                                <div>
-                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Created</strong>
-                                                    <div className="mt-1 text-sm">{collab.created_at ? new Date(collab.created_at as any).toLocaleString() : '—'}</div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Current members</strong>
-                                                    <p className="mt-1 text-lg font-semibold">{acceptedMembers.length}</p>
-                                                </div>
-                                                <div>
-                                                    <strong className="block text-xs uppercase tracking-wide text-foreground/60">Pending requests</strong>
-                                                    <p className="mt-1 text-lg font-semibold">{pendingMembers.length}</p>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <strong className="block text-xs uppercase tracking-wide text-foreground/60">Creator</strong>
-                                                <div className="mt-2 text-sm">
-                                                    {creatorLoading ? (
-                                                        'Loading...'
-                                                    ) : creatorProfile ? (
-                                                        <div className="flex items-center gap-3">
-                                                            {creatorProfile.avatar_url ? (
-                                                                <img src={creatorProfile.avatar_url} alt={creatorProfile.name || 'avatar'} className="h-8 w-8 rounded-full object-cover" />
-                                                            ) : null}
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{creatorProfile.name ?? creatorProfile.id}</span>
-                                                                {creatorProfile.school ? <span className="text-xs text-foreground/70">{creatorProfile.school}</span> : null}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        collab.creator_id
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {user?.id === collab.creator_id ? (
-                                                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                                                    <strong className="block text-xs uppercase tracking-wide text-destructive">Danger zone</strong>
-                                                    <p className="mt-2 text-sm text-foreground/80">Change who can see this collab or remove it permanently.</p>
-                                                    <div className="mt-3 flex flex-wrap gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            className="border-destructive text-destructive hover:bg-destructive/10"
-                                                            disabled={busy}
-                                                            onClick={() => {
-                                                                setConfirmType('toggle');
-                                                                setConfirmOpen(true);
-                                                            }}
-                                                        >
-                                                            {busy && confirmType === 'toggle' ? 'Working...' : `Make ${collab.visibility === 'public' ? 'Private' : 'Public'}`}
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            disabled={busy}
-                                                            onClick={() => {
-                                                                setConfirmType('delete');
-                                                                setConfirmOpen(true);
-                                                            }}
-                                                        >
-                                                            {busy && confirmType === 'delete' ? 'Working...' : 'Delete Collab'}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ) : user ? (
-                                                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                                                    <strong className="block text-xs uppercase tracking-wide text-destructive">Danger zone</strong>
-                                                    <p className="mt-2 text-sm text-foreground/80">Leave this collab if you no longer want to participate.</p>
-                                                    <div className="mt-3">
-                                                        <Button
-                                                            variant="destructive"
-                                                            disabled={busy}
-                                                            onClick={leaveCollab}
-                                                        >
-                                                            {busy ? 'Working...' : 'Leave Collab'}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    </TabsContent>
-
-                                    <TabsContent value="members">
-                                        <div className="mt-4 space-y-6">
-                                            <div>
-                                                <div className="flex items-center justify-between">
-                                                    <strong className="text-xs uppercase tracking-wide text-foreground/60">Requests</strong>
-                                                    <Badge variant="outline" className="text-xs">{pendingMembers.length}</Badge>
-                                                </div>
-                                                <div className="mt-3 space-y-3">
-                                                    {pendingMembers.length === 0 ? (
-                                                        <p className="text-sm text-foreground/60">No pending requests.</p>
-                                                    ) : (
-                                                        pendingMembers.map((member: any) => {
-                                                            const profile = pendingProfiles[member.user_id];
-                                                            const roleLabel = member.user_id === collab.creator_id ? 'Owner' : 'Member';
-                                                            return (
-                                                                <div key={member.id ?? member.user_id} className="flex items-center justify-between rounded-lg border p-3.5">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <img
-                                                                            src={profile?.profile_photo || "https://github.com/shadcn.png"}
-                                                                            alt="profile"
-                                                                            className="h-9 w-9 rounded-full object-cover"
-                                                                        />
-                                                                        <div className="flex flex-col">
-                                                                            <span className="font-medium">{profile?.name || 'Unknown User'}</span>
-                                                                            <span className="text-xs text-foreground/70">{roleLabel}</span>
-                                                                            {member.message && (
-                                                                                <p className="mt-1 text-xs italic text-foreground/70">"{member.message}"</p>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex gap-2">
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            className="cursor-pointer"
-                                                                            size="sm"
-                                                                            disabled={busy}
-                                                                            onClick={() => handleRequestStatus(member.user_id, 'reject')}
-                                                                        >
-                                                                            <X className="text-destructive" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            className="cursor-pointer"
-                                                                            size="sm"
-                                                                            disabled={busy}
-                                                                            onClick={() => handleRequestStatus(member.user_id, 'accept')}
-                                                                        >
-                                                                            <Check className="text-emerald-400" />
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <div className="flex items-center justify-between">
-                                                    <strong className="text-xs uppercase tracking-wide text-foreground/60">Current members</strong>
-                                                    <Badge variant="outline" className="text-xs">{acceptedMembers.length}</Badge>
-                                                </div>
-                                                <div className="mt-3 space-y-3">
-                                                    {acceptedMembers.length === 0 ? (
-                                                        <p className="text-sm text-foreground/60">No accepted members yet.</p>
-                                                    ) : (
-                                                        acceptedMembers.map((member: any) => {
-                                                            const profile = memberProfiles[member.user_id];
-                                                            const roleLabel = member.user_id === collab.creator_id ? 'Owner' : 'Member';
-                                                            const isOwner = roleLabel === 'Owner';
-                                                            return (
-                                                                <div key={member.user_id} className="flex items-center justify-between rounded-lg border p-3">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <img
-                                                                            src={profile?.profile_photo || "https://github.com/shadcn.png"}
-                                                                            alt="profile"
-                                                                            className="h-9 w-9 rounded-full object-cover"
-                                                                        />
-                                                                        <div className="flex flex-col">
-                                                                            <span className="font-medium">{profile?.name || member.user_id}</span>
-                                                                            <span className="text-xs text-foreground/70">{roleLabel}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <DropdownMenu>
-                                                                        <DropdownMenuTrigger asChild>
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-8 w-8 p-0"
-                                                                                disabled={busy}
-                                                                            >
-                                                                                <span className="sr-only">Open member menu</span>
-                                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                            </Button>
-                                                                        </DropdownMenuTrigger>
-                                                                        <DropdownMenuContent align="end">
-                                                                            <DropdownMenuItem asChild>
-                                                                                <Link href={`/requests/posts/${member.user_id}`} className="flex w-full items-center gap-2">
-                                                                                    <Eye className="h-4 w-4" />
-                                                                                    <span>View profile</span>
-                                                                                </Link>
-                                                                            </DropdownMenuItem>
-                                                                            {user?.id === collab.creator_id && !isOwner ? (
-                                                                                <>
-                                                                                    <DropdownMenuSeparator />
-                                                                                    <DropdownMenuItem
-                                                                                        className=""
-                                                                                        disabled={busy}
-                                                                                        variant={`destructive`}
-                                                                                        onSelect={(event) => {
-                                                                                            event.preventDefault();
-                                                                                            if (busy) return;
-                                                                                            removeMember(member.user_id);
-                                                                                        }}
-                                                                                    >
-                                                                                        <UserMinus className="h-4 w-4" />
-                                                                                        <span>Remove from collab</span>
-                                                                                    </DropdownMenuItem>
-                                                                                </>
-                                                                            ) : null}
-                                                                        </DropdownMenuContent>
-                                                                    </DropdownMenu>
-                                                                </div>
-                                                            );
-                                                        })
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </TabsContent>
-                                </Tabs>
-
-                                <DialogFooter className="mt-4">
-                                    <Button variant="outline" onClick={() => setDetailsOpen(false)}>Close</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    </>
-                )
+        const onConfirm = async () => {
+          setConfirmOpen(false);
+          if (confirmType === "toggle") {
+            setBusy(true);
+            const supabase = createClient();
+            try {
+              const { error } = await supabase
+                .from("collab_requests")
+                .update({
+                  visibility:
+                    collab.visibility === "public" ? "private" : "public",
+                })
+                .eq("id", collab.id);
+              if (error) throw error;
+              toast.success("Visibility updated");
+              window.dispatchEvent(new CustomEvent("collab-changed"));
+            } catch (err: any) {
+              console.error("Error updating visibility", err);
+              toast.error("Error updating visibility", {
+                description: (err as any)?.message,
+              });
+            } finally {
+              setBusy(false);
+              setConfirmType(null);
             }
+          }
 
-            return <ActionMenu />
-        }
-    }
-]
+          if (confirmType === "delete") {
+            setBusy(true);
+            const supabase = createClient();
+            try {
+              const { error } = await supabase
+                .from("collab_requests")
+                .delete()
+                .eq("id", collab.id);
+              if (error) throw error;
+              toast.success("Post deleted");
+              // include id in detail so listeners can remove the row optimistically
+              window.dispatchEvent(
+                new CustomEvent("collab-changed", {
+                  detail: { id: collab.id, action: "deleted" },
+                }),
+              );
+              // close details dialog if open
+              setDetailsOpen(false);
+              // clear any loaded creator profile
+              setCreatorProfile(null);
+            } catch (err: any) {
+              console.error("Error deleting post", err);
+              toast.error("Error deleting post", {
+                description: (err as any)?.message,
+              });
+            } finally {
+              setBusy(false);
+              setConfirmType(null);
+            }
+          }
+        };
+
+        useEffect(() => {
+          if (!detailsOpen) return;
+          let mounted = true;
+          const fetchProfile = async () => {
+            setCreatorLoading(true);
+            const supabase = createClient();
+            try {
+              const { data, error } = await supabase
+                .from("profiles")
+                .select("id, name, profile_photo, school")
+                .eq("id", collab.creator_id)
+                .single();
+              if (error) throw error;
+              if (mounted) setCreatorProfile(data ?? null);
+            } catch (err: any) {
+              console.error("Error fetching creator profile", err);
+              if (mounted) setCreatorProfile(null);
+            } finally {
+              if (mounted) setCreatorLoading(false);
+            }
+          };
+          fetchProfile();
+          return () => {
+            mounted = false;
+          };
+        }, [detailsOpen, collab.creator_id]);
+
+        return (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0 relative"
+                  disabled={busy}
+                >
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                  {collab.members?.some((m: any) => m.status === "pending") &&
+                    user?.id === collab.creator_id && (
+                      <Badge
+                        variant={`default`}
+                        className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 p-0 flex items-center justify-center text-xs"
+                      >
+                        {/* {collab.members.filter((m: any) => m.status === 'pending').length} */}
+                      </Badge>
+                    )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className={`text-foreground/70`}>
+                  Actions
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  className={`cursor-pointer`}
+                  onClick={() => navigator.clipboard.writeText(collab.id)}
+                >
+                  <Copy />
+                  <span>Copy Collab ID</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className={`cursor-pointer flex items-center gap-2`}
+                  onClick={() => setDetailsOpen(true)}
+                >
+                  <Info />
+                  <span>View Details</span>
+                  {collab.members?.some((m: any) => m.status === "pending") && (
+                    <Badge variant={`default`} className="ml-auto">
+                      {
+                        collab.members.filter(
+                          (m: any) => m.status === "pending",
+                        ).length
+                      }{" "}
+                      pending
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {collab.creator_id === user?.id ? (
+                  <>
+                    <DropdownMenuItem
+                      variant={`destructive`}
+                      className={`cursor-pointer`}
+                      onClick={() => {
+                        setConfirmType("toggle");
+                        setConfirmOpen(true);
+                      }}
+                    >
+                      {collab.visibility === `public` ? <EyeClosed /> : <Eye />}
+                      <span>
+                        {busy
+                          ? "Working..."
+                          : `Make ${collab.visibility === `public` ? "Private" : "Public"}`}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      variant={`destructive`}
+                      className={`cursor-pointer`}
+                      onClick={() => {
+                        setConfirmType("delete");
+                        setConfirmOpen(true);
+                      }}
+                    >
+                      <Trash />
+                      <span>{busy ? "Working..." : "Delete"}</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem
+                    variant={`destructive`}
+                    className={`cursor-pointer`}
+                    onClick={leaveCollab}
+                  >
+                    <LogOut />
+                    <span>{busy ? "Working..." : "Leave collab"}</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {confirmType === "delete"
+                      ? "Delete Collab"
+                      : "Change Visibility"}
+                  </DialogTitle>
+                </DialogHeader>
+                <p className={`text-sm text-foreground/80 mt-2`}>
+                  {confirmType === "delete"
+                    ? "This will permanently delete the collab. Are you sure?"
+                    : `This will make the collab ${collab.visibility === "public" ? "private" : "public"}. Continue?`}
+                </p>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={onConfirm} disabled={busy}>
+                    {busy
+                      ? "Working..."
+                      : confirmType === "delete"
+                        ? "Delete"
+                        : "Confirm"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="break-words">
+                    {collab.title || "Collab Details"}
+                  </DialogTitle>
+                </DialogHeader>
+
+                <Tabs defaultValue="overview" className="mt-3">
+                  <div className="flex items-center justify-between">
+                    <TabsList className="grid grid-cols-2 w-56">
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="members">
+                        <span className="flex items-center gap-2">
+                          Members
+                          {pendingMembers.length > 0 &&
+                          user?.id === collab.creator_id ? (
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="absolute inline-flex h-full w-full rounded-full bg-foreground opacity-75 animate-ping" />
+                              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-foreground" />
+                            </span>
+                          ) : null}
+                        </span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <TabsContent value="overview">
+                    <div className="mt-4 space-y-5 text-sm text-foreground/90">
+                      <div>
+                        <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                          Description
+                        </strong>
+                        <p className="mt-1 whitespace-pre-wrap">
+                          {collab.description || "—"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                          Tags
+                        </strong>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {Array.isArray(collab.tags) &&
+                          (collab.tags as any[]).length > 0 ? (
+                            (collab.tags as any[]).map((t: any, i: number) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {t?.label ?? String(t)}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-foreground/60">
+                              —
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                            Visibility
+                          </strong>
+                          <div className="mt-1">
+                            <Badge variant="secondary" className="text-sm">
+                              {collab.visibility === "public"
+                                ? "Public"
+                                : "Private"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                            Created
+                          </strong>
+                          <div className="mt-1 text-sm">
+                            {collab.created_at
+                              ? new Date(
+                                  collab.created_at as any,
+                                ).toLocaleString()
+                              : "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                            Current members
+                          </strong>
+                          <p className="mt-1 text-lg font-semibold">
+                            {acceptedMembers.length}
+                          </p>
+                        </div>
+                        <div>
+                          <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                            Pending requests
+                          </strong>
+                          <p className="mt-1 text-lg font-semibold">
+                            {pendingMembers.length}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <strong className="block text-xs uppercase tracking-wide text-foreground/60">
+                          Creator
+                        </strong>
+                        <div className="mt-2 text-sm">
+                          {creatorLoading ? (
+                            "Loading..."
+                          ) : creatorProfile ? (
+                            <div className="flex items-center gap-3">
+                              {creatorProfile.avatar_url ? (
+                                <img
+                                  src={creatorProfile.avatar_url}
+                                  alt={creatorProfile.name || "avatar"}
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : null}
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {creatorProfile.name ?? creatorProfile.id}
+                                </span>
+                                {creatorProfile.school ? (
+                                  <span className="text-xs text-foreground/70">
+                                    {creatorProfile.school}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : (
+                            collab.creator_id
+                          )}
+                        </div>
+                      </div>
+
+                      {user?.id === collab.creator_id ? (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                          <strong className="block text-xs uppercase tracking-wide text-destructive">
+                            Danger zone
+                          </strong>
+                          <p className="mt-2 text-sm text-foreground/80">
+                            Change who can see this collab or remove it
+                            permanently.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              className="border-destructive text-destructive hover:bg-destructive/10"
+                              disabled={busy}
+                              onClick={() => {
+                                setConfirmType("toggle");
+                                setConfirmOpen(true);
+                              }}
+                            >
+                              {busy && confirmType === "toggle"
+                                ? "Working..."
+                                : `Make ${collab.visibility === "public" ? "Private" : "Public"}`}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              disabled={busy}
+                              onClick={() => {
+                                setConfirmType("delete");
+                                setConfirmOpen(true);
+                              }}
+                            >
+                              {busy && confirmType === "delete"
+                                ? "Working..."
+                                : "Delete Collab"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : user ? (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                          <strong className="block text-xs uppercase tracking-wide text-destructive">
+                            Danger zone
+                          </strong>
+                          <p className="mt-2 text-sm text-foreground/80">
+                            Leave this collab if you no longer want to
+                            participate.
+                          </p>
+                          <div className="mt-3">
+                            <Button
+                              variant="destructive"
+                              disabled={busy}
+                              onClick={leaveCollab}
+                            >
+                              {busy ? "Working..." : "Leave Collab"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="members">
+                    <div className="mt-4 space-y-6">
+                      {user?.id === collab.creator_id && (
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <strong className="text-xs uppercase tracking-wide text-foreground/60">
+                              Requests
+                            </strong>
+                            <Badge variant="outline" className="text-xs">
+                              {pendingMembers.length}
+                            </Badge>
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {pendingMembers.length === 0 ? (
+                              <p className="text-sm text-foreground/60">
+                                No pending requests.
+                              </p>
+                            ) : (
+                              pendingMembers.map((member: any) => {
+                                const profile = pendingProfiles[member.user_id];
+                                const roleLabel =
+                                  member.user_id === collab.creator_id
+                                    ? "Owner"
+                                    : "Member";
+                                return (
+                                  <div
+                                    key={member.id ?? member.user_id}
+                                    className="flex items-center justify-between rounded-lg border p-3.5"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={
+                                          profile?.profile_photo ||
+                                          "https://github.com/shadcn.png"
+                                        }
+                                        alt="profile"
+                                        className="h-9 w-9 rounded-full object-cover"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {profile?.name || "Unknown User"}
+                                        </span>
+                                        <span className="text-xs text-foreground/70">
+                                          {roleLabel}
+                                        </span>
+                                        {member.message && (
+                                          <p className="mt-1 text-xs italic text-foreground/70">
+                                            "{member.message}"
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="outline"
+                                        className="cursor-pointer"
+                                        size="sm"
+                                        disabled={busy}
+                                        onClick={() => {
+                                          setRejectingMemberId(member.user_id);
+                                          setRejectDialogOpen(true);
+                                        }}
+                                      >
+                                        <X className="text-destructive" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="cursor-pointer"
+                                        size="sm"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          handleRequestStatus(
+                                            member.user_id,
+                                            "accept",
+                                          )
+                                        }
+                                      >
+                                        <Check className="text-emerald-400" />
+                                      </Button>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={busy}
+                                            asChild
+                                          >
+                                            <Link
+                                              href={`/requests/posts/${member.user_id}`}
+                                            >
+                                              <Eye className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side={`right`}>
+                                          View Profile
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <strong className="text-xs uppercase tracking-wide text-foreground/60">
+                            Current members
+                          </strong>
+                          <Badge variant="outline" className="text-xs">
+                            {acceptedMembers.length}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          {acceptedMembers.length === 0 ? (
+                            <p className="text-sm text-foreground/60">
+                              No accepted members yet.
+                            </p>
+                          ) : (
+                            acceptedMembers.map((member: any) => {
+                              const profile = memberProfiles[member.user_id];
+                              const roleLabel =
+                                member.user_id === collab.creator_id
+                                  ? "Owner"
+                                  : "Member";
+                              const isOwner = roleLabel === "Owner";
+                              return (
+                                <div
+                                  key={member.user_id}
+                                  className="flex items-center justify-between rounded-lg border p-3"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <img
+                                      src={
+                                        profile?.profile_photo ||
+                                        "https://github.com/shadcn.png"
+                                      }
+                                      alt="profile"
+                                      className="h-9 w-9 rounded-full object-cover"
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">
+                                        {profile?.name || member.user_id}
+                                      </span>
+                                      <span className="text-xs text-foreground/70">
+                                        {roleLabel}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 p-0"
+                                        disabled={busy}
+                                      >
+                                        <span className="sr-only">
+                                          Open member menu
+                                        </span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem asChild>
+                                        <Link
+                                          href={`/requests/posts/${member.user_id}`}
+                                          className="flex w-full items-center gap-2"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                          <span>View profile</span>
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      {user?.id === collab.creator_id &&
+                                      !isOwner ? (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            className=""
+                                            disabled={busy}
+                                            variant={`destructive`}
+                                            onSelect={(event) => {
+                                              event.preventDefault();
+                                              if (busy) return;
+                                              setRemovingMemberId(
+                                                member.user_id,
+                                              );
+                                              setRemoveDialogOpen(true);
+                                            }}
+                                          >
+                                            <UserMinus className="h-4 w-4" />
+                                            <span>Remove from collab</span>
+                                          </DropdownMenuItem>
+                                        </>
+                                      ) : null}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <DialogFooter className="mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setDetailsOpen(false)}
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Reject Request Dialog */}
+            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Reject Request</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    You can optionally add a message explaining why you're
+                    rejecting this request.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="reject-message">Message (Optional)</Label>
+                    <Textarea
+                      id="reject-message"
+                      placeholder="e.g., We're looking for members with more experience in..."
+                      value={rejectMessage}
+                      onChange={(e) => setRejectMessage(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRejectDialogOpen(false);
+                      setRejectMessage("");
+                      setRejectingMemberId(null);
+                    }}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (rejectingMemberId) {
+                        await handleRequestStatus(
+                          rejectingMemberId,
+                          "reject",
+                          rejectMessage,
+                        );
+                        setRejectDialogOpen(false);
+                        setRejectMessage("");
+                        setRejectingMemberId(null);
+                      }
+                    }}
+                    disabled={busy}
+                  >
+                    {busy ? "Rejecting..." : "Reject Request"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Remove Member Dialog */}
+            <Dialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Remove Member</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Please provide a reason for removing this member. They will
+                    receive a notification with your message.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="remove-message">Reason for Removal *</Label>
+                    <Textarea
+                      id="remove-message"
+                      placeholder="e.g., This collaboration is moving in a different direction..."
+                      value={removeMessage}
+                      onChange={(e) => setRemoveMessage(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRemoveDialogOpen(false);
+                      setRemoveMessage("");
+                      setRemovingMemberId(null);
+                    }}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (removingMemberId && removeMessage.trim()) {
+                        await removeMember(removingMemberId, removeMessage);
+                        setRemoveDialogOpen(false);
+                        setRemoveMessage("");
+                        setRemovingMemberId(null);
+                      } else if (!removeMessage.trim()) {
+                        toast.error("Please provide a reason for removal");
+                      }
+                    }}
+                    disabled={busy || !removeMessage.trim()}
+                  >
+                    {busy ? "Removing..." : "Remove Member"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        );
+      }
+
+      return <ActionMenu />;
+    },
+  },
+];
