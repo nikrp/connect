@@ -2,24 +2,31 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
-    try {
-        const supabase = createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-        if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-        const { searchParams } = new URL(request.url);
-        const conversationId = searchParams.get('conversation_id');
+    const { searchParams } = new URL(request.url);
+    const conversationId = searchParams.get("conversation_id");
 
-        if (!conversationId) {
-            return NextResponse.json({ error: "Conversation ID is required" }, { status: 400 });
-        }
+    if (!conversationId) {
+      return NextResponse.json(
+        { error: "Conversation ID is required" },
+        { status: 400 },
+      );
+    }
 
-        const { data, error } = await supabase
-            .from('messages')
-            .select(`
+    const { data, error } = await supabase
+      .from("messages")
+      .select(
+        `
                 id,
                 content,
                 sender_id,
@@ -34,52 +41,65 @@ export async function GET(request: NextRequest) {
                     name,
                     profile_photo
                 )
-            `)
-            .eq('conversation_id', conversationId)
-            .order('created_at', { ascending: true });
+            `,
+      )
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
 
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
-    try {
-        const supabase = createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-        if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const { conversation_id, content, receiver_id } = await request.json();
-
-        if (!conversation_id || !content) {
-            return NextResponse.json({ error: "Conversation ID and content are required" }, { status: 400 });
-        }
-
-        const { data, error } = await supabase
-            .from('messages')
-            .insert({
-                conversation_id,
-                content,
-                sender_id: user.id,
-                receiver_id: receiver_id || null,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const { conversation_id, content, receiver_id } = await request.json();
+
+    if (!conversation_id || !content) {
+      return NextResponse.json(
+        { error: "Conversation ID and content are required" },
+        { status: 400 },
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id,
+        content,
+        sender_id: user.id,
+        receiver_id: receiver_id || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }
